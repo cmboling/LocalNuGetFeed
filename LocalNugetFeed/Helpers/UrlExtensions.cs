@@ -10,5 +10,6 @@ namespace LocalNugetFeed.Web.Helpers
 	{
 		public static string AbsoluteRouteUrl(this IUrlHelper url, string routeName, object routeValues = null)
 			=> url.RouteUrl(routeName, routeValues, url.ActionContext.HttpContext.Request.Scheme);
+		
 	}
 }

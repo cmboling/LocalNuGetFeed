@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
 
-namespace LocalNugetFeed.Web.Models
+namespace LocalNugetFeed.Core.Models
 {
 	/// <summary>
 	/// Model of NuGet Package Resource

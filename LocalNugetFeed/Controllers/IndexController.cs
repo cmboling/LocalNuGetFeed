@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using LocalNugetFeed.Core.Models;
 using LocalNugetFeed.Web.Helpers;
-using LocalNugetFeed.Web.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LocalNugetFeed.Controllers
@@ -24,7 +21,7 @@ namespace LocalNugetFeed.Controllers
 				Version = "3.0.0",
 				Resources = new List<NuGetPackageResourceModel>()
 				{
-					new NuGetPackageResourceModel("PackagePublish/2.0.0",Url.AbsoluteRouteUrl("v2/package"))
+					new NuGetPackageResourceModel("PackagePublish/2.0.0", Url.AbsoluteRouteUrl("v2/package"))
 				}
 			};
 		}

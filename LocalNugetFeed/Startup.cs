@@ -1,7 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Policy;
 using System.Threading.Tasks;
+using LocalNugetFeed.Controllers;
+using LocalNugetFeed.Core.Interfaces;
+using LocalNugetFeed.Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -26,6 +30,7 @@ namespace LocalNugetFeed
 		public void ConfigureServices(IServiceCollection services)
 		{
 			services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+			services.AddTransient<IPackageFileStorageService, PackageFileStorageService>();
 		}
 
 		// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -39,12 +44,19 @@ namespace LocalNugetFeed
 			{
 				app.UseHsts();
 			}
-
+			
+			app.UseStatusCodePages();
 			app.UseHttpsRedirection();
 			app.UseMvc(routes =>
 			{
-				routes.MapRoute("index", "v3/index.json", defaults: new { controller = "Index", action = "Get"});
+				// Service index
+				routes.MapRoute("index", "v3/index.json", defaults: new { controller = "Index", action = nameof(IndexController.Get)});
 
+				// Package Publish
+				routes.MapRoute(
+					"upload",
+					"v2/package",
+					defaults: new { controller = "Package", action = nameof(PackageController.Push) });
 			});
 
 		}
