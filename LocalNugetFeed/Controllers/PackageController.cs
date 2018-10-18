@@ -7,11 +7,11 @@ namespace LocalNugetFeed.Controllers
 {
 	public class PackageController : Controller
 	{
-		private readonly IPackageFileStorageService _storageService;
+		private readonly IPackageService _packageService;
 
-		public PackageController(IPackageFileStorageService storageService)
+		public PackageController(IPackageService packageService)
 		{
-			_storageService = storageService;
+			_packageService = packageService;
 		}
 		
 		/// <summary>
@@ -22,7 +22,7 @@ namespace LocalNugetFeed.Controllers
 		/// <returns>Status of push request</returns>
 		public async Task Push(IFormFile package)
 		{
-			var result = await _storageService.SavePackageFile(package);
+			var result = await _packageService.Push(package);
 		}
 	}
 }

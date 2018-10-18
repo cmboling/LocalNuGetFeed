@@ -1,26 +1,37 @@
+using System.IO;
 using System.Net;
 using System.Threading.Tasks;
+using LocalNugetFeed.Core.ConfigurationOptions;
 using LocalNugetFeed.Core.Interfaces;
 using LocalNugetFeed.Core.Models;
 using Microsoft.AspNetCore.Http;
+using NuGet.Packaging;
+using NuGet.Packaging.Core;
 
 namespace LocalNugetFeed.Core.Services
 {
 	public class PackageFileStorageService : IPackageFileStorageService
 	{
-		public async Task<ResponseModel> SavePackageFile(IFormFile package)
-		{
-			if (package == null)
-			{
-				return new ResponseModel(HttpStatusCode.BadRequest, "Package file not found");
-			}
+		private readonly PackagesFileStorageOptions _storageOptions;
 
-			using (var packageData = package.OpenReadStream())
+		public PackageFileStorageService(PackagesFileStorageOptions storageOptions)
+		{
+			_storageOptions = storageOptions;
+		}
+
+		public async Task<ResponseModel> SavePackageFile(NuspecReader packageNuspec, Stream sourceFileStream)
+		{
+			var packageId = packageNuspec.GetId();
+			var packageVersion = packageNuspec.GetVersion();
+
+			var packagePath = Path.Combine(_storageOptions.Path, packageId.ToLowerInvariant(), packageVersion.ToNormalizedString().ToLowerInvariant());
+			Directory.CreateDirectory(packagePath);
+
+			using (var destinationFileStream = File.Open(packagePath, FileMode.CreateNew))
 			{
-				// TODO:
-				// 1. check that package doesn't exists in local feed
-				// 2. save it locally on hard drive if it's not exist
-				// 3. to index the made changes in local database for further search by packages in db
+				sourceFileStream.Seek(0, SeekOrigin.Begin);
+
+				await sourceFileStream.CopyToAsync(destinationFileStream);
 			}
 
 			return new ResponseModel(HttpStatusCode.OK);
