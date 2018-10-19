@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using LocalNugetFeed.Core.Interfaces;
+using LocalNugetFeed.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,9 +21,11 @@ namespace LocalNugetFeed.Controllers
 		/// </summary>
 		/// <param name="package">nuget package</param>
 		/// <returns>Status of push request</returns>
-		public async Task Push(IFormFile package)
+		public async Task<ResponseModel> Push(IFormFile package)
 		{
 			var result = await _packageService.Push(package);
+			
+			return result;
 		}
 	}
 }

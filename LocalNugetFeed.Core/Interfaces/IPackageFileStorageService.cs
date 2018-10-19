@@ -9,6 +9,12 @@ namespace LocalNugetFeed.Core.Interfaces
 {
 	public interface IPackageFileStorageService
 	{
-		Task<ResponseModel> SavePackageFile(NuspecReader packageNuspec, Stream sourceFileStream);
+		/// <summary>
+		/// Save nuget package and nuspec metadata on local hard drive to an according folder
+		/// </summary>
+		/// <param name="packageReader">package reader</param>
+		/// <param name="packageFileStream">package file stream</param>
+		/// <returns>response status info</returns>
+		Task<ResponseModel> SavePackageFile(PackageArchiveReader packageReader, Stream packageFileStream);
 	}
 }

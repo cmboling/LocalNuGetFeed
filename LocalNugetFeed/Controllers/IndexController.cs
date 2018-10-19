@@ -16,14 +16,16 @@ namespace LocalNugetFeed.Controllers
 		[HttpGet]
 		public object Get()
 		{
-			return new
+			var feedInfo = new
 			{
 				Version = "3.0.0",
 				Resources = new List<NuGetPackageResourceModel>()
 				{
-					new NuGetPackageResourceModel("PackagePublish/2.0.0", Url.AbsoluteRouteUrl("v2/package"))
+					new NuGetPackageResourceModel("PackagePublish/2.0.0", Url.AbsoluteRouteUrl("upload"))
 				}
 			};
+
+			return feedInfo;
 		}
 	}
 }

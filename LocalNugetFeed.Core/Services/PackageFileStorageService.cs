@@ -2,6 +2,7 @@ using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using LocalNugetFeed.Core.ConfigurationOptions;
+using LocalNugetFeed.Core.Extensions;
 using LocalNugetFeed.Core.Interfaces;
 using LocalNugetFeed.Core.Models;
 using Microsoft.AspNetCore.Http;
@@ -19,19 +20,32 @@ namespace LocalNugetFeed.Core.Services
 			_storageOptions = storageOptions;
 		}
 
-		public async Task<ResponseModel> SavePackageFile(NuspecReader packageNuspec, Stream sourceFileStream)
+		/// <summary>
+		/// Save nuget package and nuspec metadata on local hard drive to an according folder
+		/// </summary>
+		/// <param name="packageReader">package reader</param>
+		/// <param name="packageFileStream">package file stream</param>
+		/// <returns>response status info</returns>
+		public async Task<ResponseModel> SavePackageFile(PackageArchiveReader packageReader, Stream packageFileStream)
 		{
-			var packageId = packageNuspec.GetId();
-			var packageVersion = packageNuspec.GetVersion();
+			var packageFolderPath = Path.Combine(_storageOptions.Path, packageReader.NuspecReader.PackageId(), packageReader.NuspecReader.PackageVersion());
+			var fullPackagePath = Path.Combine(packageFolderPath, $"{packageReader.NuspecReader.PackageId()}.{packageReader.NuspecReader.PackageVersion()}");
 
-			var packagePath = Path.Combine(_storageOptions.Path, packageId.ToLowerInvariant(), packageVersion.ToNormalizedString().ToLowerInvariant());
-			Directory.CreateDirectory(packagePath);
+			Directory.CreateDirectory(packageFolderPath);
 
-			using (var destinationFileStream = File.Open(packagePath, FileMode.CreateNew))
+			using (var destinationFileStream = File.Open($"{fullPackagePath}.nupkg", FileMode.CreateNew))
 			{
-				sourceFileStream.Seek(0, SeekOrigin.Begin);
+				packageFileStream.Seek(0, SeekOrigin.Begin);
 
-				await sourceFileStream.CopyToAsync(destinationFileStream);
+				await packageFileStream.CopyToAsync(destinationFileStream);
+			}
+
+			using (var nuspec = packageReader.GetNuspec())
+			{
+				using (var fileStream = File.Open($"{fullPackagePath}.nuspec", FileMode.CreateNew))
+				{
+					await nuspec.CopyToAsync(fileStream);
+				}
 			}
 
 			return new ResponseModel(HttpStatusCode.OK);

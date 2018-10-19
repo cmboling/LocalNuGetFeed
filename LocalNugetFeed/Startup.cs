@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -51,7 +51,7 @@ namespace LocalNugetFeed
 			services.AddScoped(sp =>
 			{
 				var options = sp
-					.GetService<IOptions<PackagesFileStorageOptions>>()
+					.GetService<IOptionsSnapshot<PackagesFileStorageOptions>>()
 					.Value;
 
 				options.Path = string.IsNullOrEmpty(options.Path)
@@ -60,7 +60,7 @@ namespace LocalNugetFeed
 
 				Directory.CreateDirectory(options.Path);
 
-				return sp.GetService<IOptionsSnapshot<PackagesFileStorageOptions>>().Value;
+				return options;
 			});
 		}
 

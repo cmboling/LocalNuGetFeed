@@ -1,6 +1,7 @@
 using System.Net;
 using System.Threading.Tasks;
 using LocalNugetFeed.Core.Entities;
+using LocalNugetFeed.Core.Extensions;
 using LocalNugetFeed.Core.Interfaces;
 using LocalNugetFeed.Core.Models;
 using Microsoft.AspNetCore.Http;
@@ -38,14 +39,14 @@ namespace LocalNugetFeed.Core.Services
 					var packageNuspec = reader.NuspecReader;
 
 					// step 1. we should make sure that package doesn't exists in local feed
-					var package = await Find(packageNuspec.GetId(), PackageVersion(packageNuspec));
+					var package = await Find(packageNuspec.PackageId(), packageNuspec.PackageVersion());
 					if (package != null)
 					{
 						return new ResponseModel(HttpStatusCode.BadRequest, "Package already exists");
 					}
 
 					// step 2. Save package locally to the feed			
-					var savePackageToFileResult = await _storageService.SavePackageFile(packageNuspec, sourceFileStream);
+					var savePackageToFileResult = await _storageService.SavePackageFile(reader, sourceFileStream);
 
 					if (!savePackageToFileResult.Success)
 					{
@@ -68,11 +69,6 @@ namespace LocalNugetFeed.Core.Services
 					return new ResponseModel(HttpStatusCode.OK);
 				}
 			}
-
-			string PackageVersion(NuspecReader packageNuspec)
-			{
-				return packageNuspec.GetVersion().ToNormalizedString();
-			}
 		}
 
 		/// <summary>
@@ -81,9 +77,10 @@ namespace LocalNugetFeed.Core.Services
 		/// <param name="id">package id</param>
 		/// <param name="version">package version</param>
 		/// <returns>response with result</returns>		
-		public Task<Package> Find(string id, string version)
+		public async Task<Package> Find(string id, string version)
 		{
-			throw new System.NotImplementedException();
+			// TODO
+			return null; // temp stub
 		}
 	}
 }
