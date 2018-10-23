@@ -27,5 +27,21 @@ namespace LocalNugetFeed.Controllers
 			
 			return result;
 		}
+		
+		[Route("packages/{q}")]
+		[Route("")]
+		public async Task<IActionResult> Get([FromQuery(Name = "q")] string query = null)
+		{
+			query = query ?? string.Empty;
+
+			var searchResult = await _packageService.Search(query);
+
+			if (searchResult.Success)
+			{
+				return new JsonResult(searchResult.Data);
+			}
+
+			return BadRequest(searchResult.Message);
+		}
 	}
 }

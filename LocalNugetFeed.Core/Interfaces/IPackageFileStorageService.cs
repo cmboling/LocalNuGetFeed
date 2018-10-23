@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using LocalNugetFeed.Core.Entities;
@@ -15,6 +17,8 @@ namespace LocalNugetFeed.Core.Interfaces
 		/// <param name="packageReader">package reader</param>
 		/// <param name="packageFileStream">package file stream</param>
 		/// <returns>response status info</returns>
-		Task<ResponseModel> SavePackageFile(PackageArchiveReader packageReader, Stream packageFileStream);
+		Task<ResponseModel<Package>> Save(PackageArchiveReader packageReader, Stream packageFileStream);
+
+		ResponseModel<IReadOnlyList<Package>> Read();
 	}
 }

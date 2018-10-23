@@ -5,14 +5,12 @@ namespace LocalNugetFeed.Core.Entities
 	/// </summary>
 	public class Package
 	{
-		public int Key { get; set; }
-		
+		public string Id { get; set; }
+
 		public string Version { get; set; }
 
-		public string Id { get; set; }
-		
 		public string Description { get; set; }
-		
-		public string[] Authors { get; set; }
+
+		public string Authors { get; set; }
 	}
 }

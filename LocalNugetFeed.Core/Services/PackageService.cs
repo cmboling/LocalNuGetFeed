@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using LocalNugetFeed.Core.Entities;
@@ -12,12 +15,12 @@ namespace LocalNugetFeed.Core.Services
 	public class PackageService : IPackageService
 	{
 		private readonly IPackageFileStorageService _storageService;
-		private readonly IPackageDatabaseService _databaseService;
+		private readonly IPackageSessionService _sessionService;
 
-		public PackageService(IPackageFileStorageService storageService, IPackageDatabaseService databaseService)
+		public PackageService(IPackageFileStorageService storageService, IPackageSessionService sessionService)
 		{
 			_storageService = storageService;
-			_databaseService = databaseService;
+			_sessionService = sessionService;
 		}
 
 		/// <summary>
@@ -39,48 +42,81 @@ namespace LocalNugetFeed.Core.Services
 					var packageNuspec = reader.NuspecReader;
 
 					// step 1. we should make sure that package doesn't exists in local feed
-					var package = await Find(packageNuspec.PackageId(), packageNuspec.PackageVersion());
+					var package = Get(packageNuspec.PackageId(), packageNuspec.PackageVersion());
 					if (package != null)
 					{
 						return new ResponseModel(HttpStatusCode.BadRequest, "Package already exists");
 					}
 
 					// step 2. Save package locally to the feed			
-					var savePackageToFileResult = await _storageService.SavePackageFile(reader, sourceFileStream);
+					var savePackageToFileResult = await _storageService.Save(reader, sourceFileStream);
 
 					if (!savePackageToFileResult.Success)
 					{
 						return new ResponseModel(savePackageToFileResult.StatusCode, savePackageToFileResult.Message);
 					}
 
-					package = new Package()
-					{
-						// TODO
-					};
-
-					// step 3. now need index the package info in local database for further search by packages in db
-					var savePackageToDbResult = await _databaseService.Save(package);
-
-					if (!savePackageToDbResult.Success)
-					{
-						return new ResponseModel(savePackageToDbResult.StatusCode, savePackageToDbResult.Message);
-					}
+					// add new package to Session
+					_sessionService.Set(savePackageToFileResult.Data);
 
 					return new ResponseModel(HttpStatusCode.OK);
 				}
 			}
 		}
 
+
+
 		/// <summary>
-		/// Find package in local feed
+		/// Get package by id and version
 		/// </summary>
 		/// <param name="id">package id</param>
 		/// <param name="version">package version</param>
 		/// <returns>response with result</returns>		
-		public async Task<Package> Find(string id, string version)
+		public Package Get(string id, string version)
 		{
-			// TODO
-			return null; // temp stub
+			var packages = _sessionService.Get();
+
+			if (!packages.Any()) return null;
+			
+			var package = packages.FirstOrDefault(x =>
+				x.Id.Equals(id, StringComparison.InvariantCultureIgnoreCase) && x.Version.Equals(version, StringComparison.InvariantCultureIgnoreCase));
+
+			return package;
+
 		}
+
+		/// <summary>
+		/// Search packages by query in local feed (session/file system)
+		/// </summary>
+		/// <param name="query">search query</param>
+		/// <returns>response with result</returns>		
+		public async Task<ResponseModel<IReadOnlyList<Package>>> Search(string query)
+		{
+			// before we should check packages in session and use their if are exist there
+			var packages = _sessionService.Get();
+			if (packages == null)
+			{
+				// otherwise we need to load packages from file system
+				var getPackagesResult = await Task.FromResult(_storageService.Read());
+
+				if (!getPackagesResult.Success)
+				{
+					return new ResponseModel<IReadOnlyList<Package>>(getPackagesResult.StatusCode, getPackagesResult.Message);
+				}
+
+				packages = getPackagesResult.Data.ToList();
+
+				if (packages.Any())
+				{
+					//update packages in session storage
+					_sessionService.Set(packages);
+				}
+			}
+
+			// TODO: filter packages by query	
+
+			return new ResponseModel<IReadOnlyList<Package>>(packages, HttpStatusCode.OK);
+		}
+
 	}
 }

@@ -1,13 +1,14 @@
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using LocalNugetFeed.Core.ConfigurationOptions;
+using LocalNugetFeed.Core.Entities;
 using LocalNugetFeed.Core.Extensions;
 using LocalNugetFeed.Core.Interfaces;
 using LocalNugetFeed.Core.Models;
-using Microsoft.AspNetCore.Http;
 using NuGet.Packaging;
-using NuGet.Packaging.Core;
 
 namespace LocalNugetFeed.Core.Services
 {
@@ -26,7 +27,7 @@ namespace LocalNugetFeed.Core.Services
 		/// <param name="packageReader">package reader</param>
 		/// <param name="packageFileStream">package file stream</param>
 		/// <returns>response status info</returns>
-		public async Task<ResponseModel> SavePackageFile(PackageArchiveReader packageReader, Stream packageFileStream)
+		public async Task<ResponseModel<Package>> Save(PackageArchiveReader packageReader, Stream packageFileStream)
 		{
 			var packageFolderPath = Path.Combine(_storageOptions.Path, packageReader.NuspecReader.PackageId(), packageReader.NuspecReader.PackageVersion());
 			var fullPackagePath = Path.Combine(packageFolderPath, $"{packageReader.NuspecReader.PackageId()}.{packageReader.NuspecReader.PackageVersion()}");
@@ -48,7 +49,57 @@ namespace LocalNugetFeed.Core.Services
 				}
 			}
 
-			return new ResponseModel(HttpStatusCode.OK);
+			var package = MapNuspecDataToPackage(packageReader.NuspecReader);
+			
+			return new ResponseModel<Package>(package, HttpStatusCode.OK);
+		}
+
+		/// <summary>
+		/// Read all packages from file system
+		/// </summary>
+		/// <returns>packages collection</returns>
+		public ResponseModel<IReadOnlyList<Package>> Read()
+		{
+			if (!Directory.Exists(_storageOptions.Path))
+			{
+				return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NoContent, "Packages folder not found");
+			}
+
+			var result = new List<Package>();
+			var packagesPaths = Directory.GetDirectories(_storageOptions.Path);
+
+			// since all packages are storing according with 2-level hierarchy (packageRootDirectory -> packageVersionDirectory) we should lookup using nested loop by package version, and we will ignore other packages 
+			foreach (var packageRootPath in packagesPaths)
+			{
+				var packageVersionPaths = Directory.GetDirectories(packageRootPath);
+
+				foreach (var packageVersionPath in packageVersionPaths)
+				{
+					var packageFileName = Directory.GetFiles(packageVersionPath, "*.nupkg").FirstOrDefault();
+					if (!string.IsNullOrWhiteSpace(packageFileName))
+					{
+						using (var reader = new PackageArchiveReader(packageFileName))
+						{
+							var packageNuspec = reader.NuspecReader;
+
+							result.Add(MapNuspecDataToPackage(packageNuspec));
+						}
+					}
+				}
+			}
+
+			return new ResponseModel<IReadOnlyList<Package>>(result, HttpStatusCode.OK);
+		}
+
+		private static Package MapNuspecDataToPackage(NuspecReader packageNuspec)
+		{
+			return new Package()
+			{
+				Id = packageNuspec.PackageId(),
+				Version = packageNuspec.PackageVersion(),
+				Description = packageNuspec.GetDescription(),
+				Authors = packageNuspec.GetAuthors(),
+			};
 		}
 	}
 }

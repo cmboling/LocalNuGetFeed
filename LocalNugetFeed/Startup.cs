@@ -1,20 +1,15 @@
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.IO;
-using System.Linq;
-using System.Security.Policy;
-using System.Threading.Tasks;
 using LocalNugetFeed.Controllers;
+using LocalNugetFeed.Core.Common;
 using LocalNugetFeed.Core.ConfigurationOptions;
 using LocalNugetFeed.Core.Interfaces;
 using LocalNugetFeed.Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace LocalNugetFeed
@@ -31,11 +26,20 @@ namespace LocalNugetFeed
 		// This method gets called by the runtime. Use this method to add services to the container.
 		public void ConfigureServices(IServiceCollection services)
 		{
+			services.AddDistributedMemoryCache();
+			services.AddHttpContextAccessor();
+			services.AddSession(options =>
+			{
+				options.Cookie.Name = Constants.PackagesSessionCookieKey;
+				options.IdleTimeout = TimeSpan.FromMinutes(5);
+				options.Cookie.HttpOnly = true;
+			});
+			
 			services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
 			
 			services.AddTransient<IPackageFileStorageService, PackageFileStorageService>();
 			services.AddTransient<IPackageService, PackageService>();
-			services.AddTransient<IPackageDatabaseService, PackageDatabaseService>();
+			services.AddSingleton<IPackageSessionService, PackageSessionService>();
 			
 			InitPackageFileStorage(services);
 		}
@@ -45,7 +49,7 @@ namespace LocalNugetFeed
 		/// </summary>
 		private void InitPackageFileStorage(IServiceCollection services)
 		{
-			var fileStorageSection = Configuration.GetSection("PackagesFileStorage");
+			var fileStorageSection = Configuration.GetSection(Constants.PackagesFileStorage);
 
 			services.Configure<PackagesFileStorageOptions>(fileStorageSection);
 			services.AddScoped(sp =>
@@ -55,7 +59,7 @@ namespace LocalNugetFeed
 					.Value;
 
 				options.Path = string.IsNullOrEmpty(options.Path)
-					? Path.Combine(Directory.GetCurrentDirectory(), "Packages")
+					? Path.Combine(Directory.GetCurrentDirectory(), Constants.DefaultPackagesDirectory)
 					: options.Path;
 
 				Directory.CreateDirectory(options.Path);
@@ -76,17 +80,21 @@ namespace LocalNugetFeed
 				app.UseHsts();
 			}
 			
+			// todo: register api key for nuget push operation
+			
+			app.UseSession();
 			app.UseStatusCodePages();
 			app.UseHttpsRedirection();
 			app.UseMvc(routes =>
 			{
+				
 				// Service index
 				routes.MapRoute("index", "v3/index.json", defaults: new { controller = "Index", action = nameof(IndexController.Get)});
 
 				// Package Publish
 				routes.MapRoute(
-					"upload",
-					"v2/package",
+					Constants.NuGetPushActionName,
+					Constants.NuGetPushRelativeUrl,
 					defaults: new { controller = "Package", action = nameof(PackageController.Push) });
 			});
 

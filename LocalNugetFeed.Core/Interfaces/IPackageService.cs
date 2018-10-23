@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using LocalNugetFeed.Core.Entities;
 using LocalNugetFeed.Core.Models;
@@ -15,11 +16,19 @@ namespace LocalNugetFeed.Core.Interfaces
 		Task<ResponseModel> Push(IFormFile packageFile);
 
 		/// <summary>
-		/// Find package in local feed
+		/// Get package by id and version in local feed
 		/// </summary>
 		/// <param name="id">package id</param>
 		/// <param name="version">package version</param>
+		/// <returns>response with result</returns>	
+		Package Get(string id, string version);
+
+		/// <summary>
+		/// Search packages by query in local feed (session/file system)
+		/// </summary>
+		/// <param name="query">search query</param>
 		/// <returns>response with result</returns>		
-		Task<Package> Find(string id, string version);
+		Task<ResponseModel<IReadOnlyList<Package>>> Search(string query);
+
 	}
 }
