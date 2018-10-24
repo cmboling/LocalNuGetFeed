@@ -22,8 +22,7 @@ namespace LocalNugetFeed.Core.Services
 		/// <returns></returns>
 		public IReadOnlyList<Package> Get()
 		{
-			var packages = _session.Get<IReadOnlyList<Package>>(Constants.PackagesSessionCookieKey);
-			return packages;
+			return _session.Get<IReadOnlyList<Package>>(Constants.PackagesSessionCookieKey);
 		}
 
 		/// <summary>

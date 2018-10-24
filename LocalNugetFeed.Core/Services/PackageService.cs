@@ -9,6 +9,7 @@ using LocalNugetFeed.Core.Interfaces;
 using LocalNugetFeed.Core.Models;
 using Microsoft.AspNetCore.Http;
 using NuGet.Packaging;
+using NuGet.Versioning;
 
 namespace LocalNugetFeed.Core.Services
 {
@@ -16,6 +17,7 @@ namespace LocalNugetFeed.Core.Services
 	{
 		private readonly IPackageFileStorageService _storageService;
 		private readonly IPackageSessionService _sessionService;
+		private IReadOnlyList<Package> Packages => _sessionService.Get();
 
 		public PackageService(IPackageFileStorageService storageService, IPackageSessionService sessionService)
 		{
@@ -65,7 +67,6 @@ namespace LocalNugetFeed.Core.Services
 		}
 
 
-
 		/// <summary>
 		/// Get package by id and version
 		/// </summary>
@@ -74,16 +75,15 @@ namespace LocalNugetFeed.Core.Services
 		/// <returns>response with result</returns>		
 		public Package Get(string id, string version)
 		{
-			var packages = _sessionService.Get();
+			if (!Packages.Any()) return null;
 
-			if (!packages.Any()) return null;
-			
-			var package = packages.FirstOrDefault(x =>
-				x.Id.Equals(id, StringComparison.InvariantCultureIgnoreCase) && x.Version.Equals(version, StringComparison.InvariantCultureIgnoreCase));
+			var package = Packages.FirstOrDefault(x =>
+				x.Id.Equals(id, StringComparison.InvariantCultureIgnoreCase) &&
+				x.Version.Equals(version, StringComparison.InvariantCultureIgnoreCase));
 
 			return package;
-
 		}
+
 
 		/// <summary>
 		/// Search packages by query in local feed (session/file system)
@@ -93,8 +93,7 @@ namespace LocalNugetFeed.Core.Services
 		public async Task<ResponseModel<IReadOnlyList<Package>>> Search(string query)
 		{
 			// before we should check packages in session and use their if are exist there
-			var packages = _sessionService.Get();
-			if (packages == null)
+			if (Packages == null)
 			{
 				// otherwise we need to load packages from file system
 				var getPackagesResult = await Task.FromResult(_storageService.Read());
@@ -104,19 +103,31 @@ namespace LocalNugetFeed.Core.Services
 					return new ResponseModel<IReadOnlyList<Package>>(getPackagesResult.StatusCode, getPackagesResult.Message);
 				}
 
-				packages = getPackagesResult.Data.ToList();
+				var packages = getPackagesResult.Data.ToList();
 
 				if (packages.Any())
 				{
 					//update packages in session storage
 					_sessionService.Set(packages);
 				}
+				else
+				{
+					return new ResponseModel<IReadOnlyList<Package>>(packages, HttpStatusCode.OK);
+				}
 			}
 
-			// TODO: filter packages by query	
+			var searchResult = new List<Package>(Packages);
+			if (!string.IsNullOrEmpty(query))
+			{
+				query = query.ToLowerInvariant();
+				searchResult = searchResult.Where(x => x.Id.ToLowerInvariant().Contains(query) || x.Description.ToLowerInvariant().Contains(query)).ToList();
+			}
 
-			return new ResponseModel<IReadOnlyList<Package>>(packages, HttpStatusCode.OK);
+			searchResult = searchResult.OrderByDescending(s => new NuGetVersion(s.Version))
+				.GroupBy(g => g.Id)
+				.Select(z => z.First()).ToList();
+
+			return new ResponseModel<IReadOnlyList<Package>>(searchResult, HttpStatusCode.OK);
 		}
-
 	}
 }
