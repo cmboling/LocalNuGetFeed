@@ -17,7 +17,7 @@ namespace LocalNugetFeed.Core.Services
 	{
 		private readonly IPackageFileStorageService _storageService;
 		private readonly IPackageSessionService _sessionService;
-		private IReadOnlyList<Package> Packages => _sessionService.Get();
+		private IReadOnlyList<Package> Packages => _sessionService.Get() ?? new List<Package>();
 
 		public PackageService(IPackageFileStorageService storageService, IPackageSessionService sessionService)
 		{
@@ -84,6 +84,24 @@ namespace LocalNugetFeed.Core.Services
 			return package;
 		}
 
+		/// <summary>
+		/// Get package(s) by id
+		/// </summary>
+		/// <param name="id">package id</param>
+		/// <returns>response with result</returns>		
+		public ResponseModel<IReadOnlyList<Package>> PackageVersions(string id)
+		{
+			if (!Packages.Any())
+			{
+				return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.BadRequest, "Packages storage is empty");
+			}
+
+			var packageVersions = Packages.Where(x =>
+				x.Id.Equals(id, StringComparison.InvariantCultureIgnoreCase)).ToList();
+
+			return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, packageVersions);
+		}
+
 
 		/// <summary>
 		/// Search packages by query in local feed (session/file system)
@@ -93,7 +111,7 @@ namespace LocalNugetFeed.Core.Services
 		public async Task<ResponseModel<IReadOnlyList<Package>>> Search(string query)
 		{
 			// before we should check packages in session and use their if are exist there
-			if (Packages == null)
+			if (!Packages.Any())
 			{
 				// otherwise we need to load packages from file system
 				var getPackagesResult = await Task.FromResult(_storageService.Read());
@@ -112,7 +130,7 @@ namespace LocalNugetFeed.Core.Services
 				}
 				else
 				{
-					return new ResponseModel<IReadOnlyList<Package>>(packages, HttpStatusCode.OK);
+					return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, packages);
 				}
 			}
 
@@ -127,7 +145,7 @@ namespace LocalNugetFeed.Core.Services
 				.GroupBy(g => g.Id)
 				.Select(z => z.First()).ToList();
 
-			return new ResponseModel<IReadOnlyList<Package>>(searchResult, HttpStatusCode.OK);
+			return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, searchResult);
 		}
 	}
 }

@@ -50,8 +50,8 @@ namespace LocalNugetFeed.Core.Services
 			}
 
 			var package = MapNuspecDataToPackage(packageReader.NuspecReader);
-			
-			return new ResponseModel<Package>(package, HttpStatusCode.OK);
+
+			return new ResponseModel<Package>(HttpStatusCode.OK, package);
 		}
 
 		/// <summary>
@@ -88,7 +88,7 @@ namespace LocalNugetFeed.Core.Services
 				}
 			}
 
-			return new ResponseModel<IReadOnlyList<Package>>(result, HttpStatusCode.OK);
+			return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, result);
 		}
 
 		private static Package MapNuspecDataToPackage(NuspecReader packageNuspec)

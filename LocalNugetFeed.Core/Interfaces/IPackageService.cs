@@ -24,6 +24,13 @@ namespace LocalNugetFeed.Core.Interfaces
 		Package Get(string id, string version);
 
 		/// <summary>
+		/// Get package(s) by id
+		/// </summary>
+		/// <param name="id">package id</param>
+		/// <returns>response with result</returns>		
+		ResponseModel<IReadOnlyList<Package>> PackageVersions(string id);
+
+		/// <summary>
 		/// Search packages by query in local feed (session/file system)
 		/// </summary>
 		/// <param name="query">search query</param>
