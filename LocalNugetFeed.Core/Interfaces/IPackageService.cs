@@ -33,9 +33,9 @@ namespace LocalNugetFeed.Core.Interfaces
 		/// <summary>
 		/// Search packages by query in local feed (session/file system)
 		/// </summary>
-		/// <param name="query">search query</param>
+		/// <param name="query">search query (optional)</param>
 		/// <returns>response with result</returns>		
-		Task<ResponseModel<IReadOnlyList<Package>>> Search(string query);
+		Task<ResponseModel<IReadOnlyList<Package>>> Search(string query = null);
 
 	}
 }

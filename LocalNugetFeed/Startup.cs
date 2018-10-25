@@ -35,7 +35,7 @@ namespace LocalNugetFeed
 				options.Cookie.HttpOnly = true;
 			});
 			
-			services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+			services.AddMvcCore().AddDataAnnotations().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
 			
 			services.AddTransient<IPackageFileStorageService, PackageFileStorageService>();
 			services.AddTransient<IPackageService, PackageService>();

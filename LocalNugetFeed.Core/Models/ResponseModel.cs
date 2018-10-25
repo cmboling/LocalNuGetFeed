@@ -9,7 +9,7 @@ namespace LocalNugetFeed.Core.Models
 		public string Message { get; }
 		public HttpStatusCode StatusCode { get; }
 		public T Data { get; }
-		public bool Success => StatusCode == HttpStatusCode.OK;
+		public bool Success => StatusCode == HttpStatusCode.OK || StatusCode == HttpStatusCode.NoContent;
 
 		[JsonConstructor]
 		public ResponseModel(HttpStatusCode statusCode, T data, string message = null)

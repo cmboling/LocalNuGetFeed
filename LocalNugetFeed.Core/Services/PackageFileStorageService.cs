@@ -62,7 +62,7 @@ namespace LocalNugetFeed.Core.Services
 		{
 			if (!Directory.Exists(_storageOptions.Path))
 			{
-				return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NoContent, "Packages folder not found");
+				return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NotFound, "Packages folder not found");
 			}
 
 			var result = new List<Package>();

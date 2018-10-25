@@ -37,32 +37,39 @@ namespace LocalNugetFeed.Core.Services
 				return new ResponseModel(HttpStatusCode.BadRequest, "Package file not found");
 			}
 
-			using (var sourceFileStream = packageFile.OpenReadStream())
+			try
 			{
-				using (var reader = new PackageArchiveReader(sourceFileStream))
+				using (var sourceFileStream = packageFile.OpenReadStream())
 				{
-					var packageNuspec = reader.NuspecReader;
-
-					// step 1. we should make sure that package doesn't exists in local feed
-					var package = Get(packageNuspec.PackageId(), packageNuspec.PackageVersion());
-					if (package != null)
+					using (var reader = new PackageArchiveReader(sourceFileStream))
 					{
-						return new ResponseModel(HttpStatusCode.BadRequest, "Package already exists");
+						var packageNuspec = reader.NuspecReader;
+
+						// step 1. we should make sure that package doesn't exists in local feed
+						var package = Get(packageNuspec.PackageId(), packageNuspec.PackageVersion());
+						if (package != null)
+						{
+							return new ResponseModel(HttpStatusCode.BadRequest, "Package already exists");
+						}
+
+						// step 2. Save package locally to the feed			
+						var savePackageToFileResult = await _storageService.Save(reader, sourceFileStream);
+
+						if (!savePackageToFileResult.Success)
+						{
+							return new ResponseModel(savePackageToFileResult.StatusCode, savePackageToFileResult.Message);
+						}
+
+						// add new package to Session
+						_sessionService.Set(savePackageToFileResult.Data);
+
+						return new ResponseModel(HttpStatusCode.OK);
 					}
-
-					// step 2. Save package locally to the feed			
-					var savePackageToFileResult = await _storageService.Save(reader, sourceFileStream);
-
-					if (!savePackageToFileResult.Success)
-					{
-						return new ResponseModel(savePackageToFileResult.StatusCode, savePackageToFileResult.Message);
-					}
-
-					// add new package to Session
-					_sessionService.Set(savePackageToFileResult.Data);
-
-					return new ResponseModel(HttpStatusCode.OK);
 				}
+			}
+			catch (Exception)
+			{
+				return new ResponseModel(HttpStatusCode.InternalServerError, "Unable to push package");
 			}
 		}
 
@@ -106,22 +113,30 @@ namespace LocalNugetFeed.Core.Services
 		/// <summary>
 		/// Search packages by query in local feed (session/file system)
 		/// </summary>
-		/// <param name="query">search query</param>
+		/// <param name="query">search query (optional)</param>
 		/// <returns>response with result</returns>		
-		public async Task<ResponseModel<IReadOnlyList<Package>>> Search(string query)
+		public async Task<ResponseModel<IReadOnlyList<Package>>> Search(string query = null)
 		{
 			// before we should check packages in session and use their if are exist there
 			if (!Packages.Any())
 			{
+				ResponseModel<IReadOnlyList<Package>> filesReadResult;
 				// otherwise we need to load packages from file system
-				var getPackagesResult = await Task.FromResult(_storageService.Read());
-
-				if (!getPackagesResult.Success)
+				try
 				{
-					return new ResponseModel<IReadOnlyList<Package>>(getPackagesResult.StatusCode, getPackagesResult.Message);
+					filesReadResult = await Task.FromResult(_storageService.Read());
+				}
+				catch (Exception)
+				{
+					return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.InternalServerError);
 				}
 
-				var packages = getPackagesResult.Data.ToList();
+				if (!filesReadResult.Success)
+				{
+					return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.BadRequest, filesReadResult.Message);
+				}
+
+				var packages = filesReadResult.Data.ToList();
 
 				if (packages.Any())
 				{
@@ -130,7 +145,7 @@ namespace LocalNugetFeed.Core.Services
 				}
 				else
 				{
-					return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, packages);
+					return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NoContent);
 				}
 			}
 
@@ -139,8 +154,12 @@ namespace LocalNugetFeed.Core.Services
 			{
 				query = query.ToLowerInvariant();
 				searchResult = searchResult.Where(x => x.Id.ToLowerInvariant().Contains(query) || x.Description.ToLowerInvariant().Contains(query)).ToList();
+				if (!searchResult.Any())
+				{
+					return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NoContent);
+				}
 			}
-
+			
 			searchResult = searchResult.OrderByDescending(s => new NuGetVersion(s.Version))
 				.GroupBy(g => g.Id)
 				.Select(z => z.First()).ToList();
