@@ -1,7 +1,9 @@
-using System.ComponentModel.DataAnnotations;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
+using LocalNugetFeed.Core.Entities;
 using LocalNugetFeed.Core.Interfaces;
+using LocalNugetFeed.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -23,10 +25,11 @@ namespace LocalNugetFeed.Controllers
 		/// Pushes a nuget package to local feed
 		/// Refs: https://docs.microsoft.com/en-us/nuget/api/package-publish-resource#push-a-package
 		/// </summary>
-		/// <param name="package">nuget package</param>
+		/// <param name="package">nuget package file</param>
 		/// <returns>Status of push request</returns>
 		[HttpPut]
-		public async Task<IActionResult> Push([BindRequired, FromBody] IFormFile package)
+		[ProducesResponseType(400, Type = typeof(BadRequestObjectResult))]
+		public async Task<ActionResult<ResponseModel>> Push([BindRequired, FromBody] IFormFile package)
 		{
 			var result = await _packageService.Push(package);
 
@@ -39,49 +42,55 @@ namespace LocalNugetFeed.Controllers
 		}
 
 		/// <summary>
-		/// Get packages from local feed (query is optional)
+		/// Get packages from local feed 
 		/// </summary>
-		/// <param name="query"></param>
+		/// <param name="query">search query (optional)</param>
 		/// <returns></returns>
-		[Route("packages/{q}")]
-		[Route("")]
-		[HttpGet]
-		public async Task<IActionResult> Get([FromQuery(Name = "q")] string query = null)
+		[Route("{q?}")]
+		[ProducesResponseType(404, Type = typeof(NotFoundObjectResult))]
+		[ProducesResponseType(400, Type = typeof(BadRequestObjectResult))]
+		public async Task<ActionResult<IReadOnlyList<Package>>> Get([FromQuery(Name = "q")] string query = null)
 		{
 			var searchResult = await _packageService.Search(query);
 
-			if (!searchResult.Success)
+			if (searchResult.Success)
 			{
-				return BadRequest(searchResult.Message ?? DefaultErrorMessage);
+				return Ok(searchResult.Data);
 			}
-			
-			if (searchResult.StatusCode == HttpStatusCode.NoContent)
+
+			if (searchResult.StatusCode.Equals(HttpStatusCode.NotFound))
 			{
-				return NoContent();
+				return NotFound(searchResult.Message);
 			}
-			
-			return Ok(new JsonResult(searchResult.Data));
+
+			return BadRequest(searchResult.Message ?? DefaultErrorMessage);
 		}
 
 		/// <summary>
 		/// Get specific package from local feed by id
 		/// </summary>
-		/// <param name="id"></param>
+		/// <param name="id">Package id</param>
 		/// <returns></returns>
 		[Route("package/{id}")]
-		[HttpGet]
-		public async Task<IActionResult> PackageVersions([BindRequired, FromRoute] string id)
+		[ProducesResponseType(404, Type = typeof(NotFoundObjectResult))]
+		[ProducesResponseType(400, Type = typeof(BadRequestObjectResult))]
+		public async Task<ActionResult<IReadOnlyList<Package>>> PackageVersions([BindRequired, FromRoute] string id)
 		{
-			if (!ModelState.IsValid)
+			if (string.IsNullOrWhiteSpace(id))
 			{
 				return BadRequest(ModelState);
 			}
 
-			var result = await Task.FromResult(_packageService.PackageVersions(id));
+			var result = await _packageService.PackageVersions(id);
 
 			if (result.Success)
 			{
-				return Ok(new JsonResult(result.Data));
+				return Ok(result.Data);
+			}
+
+			if (result.StatusCode.Equals(HttpStatusCode.NotFound))
+			{
+				return NotFound(result.Message);
 			}
 
 			return BadRequest(result.Message ?? DefaultErrorMessage);

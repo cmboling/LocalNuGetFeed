@@ -1,5 +1,4 @@
 using System.Net;
-using LocalNugetFeed.Core.Interfaces;
 using Newtonsoft.Json;
 
 namespace LocalNugetFeed.Core.Models
@@ -9,7 +8,7 @@ namespace LocalNugetFeed.Core.Models
 		public string Message { get; }
 		public HttpStatusCode StatusCode { get; }
 		public T Data { get; }
-		public bool Success => StatusCode == HttpStatusCode.OK || StatusCode == HttpStatusCode.NoContent;
+		public bool Success => StatusCode == HttpStatusCode.OK;
 
 		[JsonConstructor]
 		public ResponseModel(HttpStatusCode statusCode, T data, string message = null)

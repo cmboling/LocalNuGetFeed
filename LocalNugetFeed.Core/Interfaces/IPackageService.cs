@@ -21,14 +21,14 @@ namespace LocalNugetFeed.Core.Interfaces
 		/// <param name="id">package id</param>
 		/// <param name="version">package version</param>
 		/// <returns>response with result</returns>	
-		Package Get(string id, string version);
+		Task<ResponseModel<Package>> Get(string id, string version);
 
 		/// <summary>
 		/// Get package(s) by id
 		/// </summary>
 		/// <param name="id">package id</param>
 		/// <returns>response with result</returns>		
-		ResponseModel<IReadOnlyList<Package>> PackageVersions(string id);
+		Task<ResponseModel<IReadOnlyList<Package>>> PackageVersions(string id);
 
 		/// <summary>
 		/// Search packages by query in local feed (session/file system)
@@ -36,6 +36,12 @@ namespace LocalNugetFeed.Core.Interfaces
 		/// <param name="query">search query (optional)</param>
 		/// <returns>response with result</returns>		
 		Task<ResponseModel<IReadOnlyList<Package>>> Search(string query = null);
+
+		/// <summary>
+		/// Get packages from session or file system
+		/// </summary>
+		/// <returns>response with result</returns>
+		Task<ResponseModel<IReadOnlyList<Package>>> GetPackages();
 
 	}
 }

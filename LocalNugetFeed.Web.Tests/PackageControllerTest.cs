@@ -10,6 +10,7 @@ using LocalNugetFeed.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
+using NuGet.Versioning;
 using Xunit;
 
 namespace LocalNugetFeed.Web.Tests
@@ -30,10 +31,11 @@ namespace LocalNugetFeed.Web.Tests
 			var result = await controller.Push(_mockFile);
 
 			// Assert
-			var actionResult = Assert.IsType<OkObjectResult>(result);
-			var model = Assert.IsAssignableFrom<ResponseModel>(
+			var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+			var pushResponse = Assert.IsAssignableFrom<ResponseModel>(
 				actionResult.Value);
-			Assert.True(model.Success);
+
+			Assert.True(pushResponse.Success);
 		}
 
 		[Fact]
@@ -49,7 +51,7 @@ namespace LocalNugetFeed.Web.Tests
 			var result = await controller.Push(null);
 
 			// Assert
-			var actionResult = Assert.IsType<BadRequestObjectResult>(result);
+			var actionResult = Assert.IsType<BadRequestObjectResult>(result.Result);
 			Assert.Equal(actionResult.Value, failedResponseText);
 		}
 
@@ -66,15 +68,14 @@ namespace LocalNugetFeed.Web.Tests
 			var result = await controller.Get();
 
 			// Assert
-			var actionResult = Assert.IsType<OkObjectResult>(result);
-			var model = Assert.IsAssignableFrom<JsonResult>(
+			var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+			var packages = Assert.IsAssignableFrom<IReadOnlyList<Package>>(
 				actionResult.Value);
-			var packages = ((IReadOnlyList<Package>) model.Value);
-			Assert.NotNull(model.Value);
+			Assert.NotNull(packages);
 			Assert.True(packages.Any());
 			Assert.True(packages.First().Id == TestPackages.First().Id);
 		}
-		
+
 		[Fact]
 		public async Task Get_ReturnsBadRequestResult()
 		{
@@ -88,58 +89,112 @@ namespace LocalNugetFeed.Web.Tests
 			var result = await controller.Get();
 
 			// Assert
-			Assert.IsType<BadRequestObjectResult>(result);
+			Assert.IsType<BadRequestObjectResult>(result.Result);
 		}
 
 
 		[Theory]
+		[InlineData("", true)]
 		[InlineData("TestPackage", true)]
 		[InlineData("UnknownPackage", false)]
-		public async Task Get_ReturnsContent_WhenQueryIsExists(string query, bool hasContent)
+		public async Task Get_ReturnsContentOrNot_WhenQueryIsExists(string query, bool isExist)
 		{
 			// setup
+			var searchResult = new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK,
+				new[] {TestPackages.OrderByDescending(x => new NuGetVersion(x.Version)).Last()});
+
 			var mockPackageService = new Mock<IPackageService>();
 			mockPackageService.Setup(s => s.Search(query))
-				.ReturnsAsync(() =>
-				{
-					var searchResult = new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, TestPackages);
-					return hasContent ? searchResult : new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NoContent);
-				});
+				.ReturnsAsync(() => isExist ? searchResult : new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NotFound));
 
 			// Act
 			var controller = new PackageController(mockPackageService.Object);
 			var result = await controller.Get(query);
 
 			// Assert
-			if (hasContent)
+			if (isExist)
 			{
-				var actionResult = Assert.IsType<OkObjectResult>(result);
-				var model = Assert.IsAssignableFrom<JsonResult>(
+				var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+				var packages = Assert.IsAssignableFrom<IReadOnlyList<Package>>(
 					actionResult.Value);
-				var packages = ((IReadOnlyList<Package>) model.Value);
+				Assert.NotNull(packages);
 				Assert.True(packages.Any());
-				Assert.True(packages.First().Id == TestPackages.First().Id);
+				Assert.True(packages.First() == searchResult.Data.First());
 			}
 			else
 			{
-				Assert.IsType<NoContentResult>(result);
+				Assert.IsType<NotFoundObjectResult>(result.Result);
 			}
 		}
 
 		[Fact]
-		public async Task Get_ReturnsNoContent_WhenNoPackages()
+		public async Task Get_ReturnsNotFound_WhenNoPackages()
 		{
 			// setup
 			var mockPackageService = new Mock<IPackageService>();
 			mockPackageService.Setup(s => s.Search(null))
-				.ReturnsAsync(new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NoContent));
+				.ReturnsAsync(new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NotFound));
 
 			// Act
 			var controller = new PackageController(mockPackageService.Object);
 			var result = await controller.Get();
 
 			// Assert
-			Assert.IsType<NoContentResult>(result);
+			Assert.IsType<NotFoundObjectResult>(result.Result);
+		}
+
+		[Theory]
+		[InlineData("MyTestPackage", true)]
+		[InlineData("UnknownPackage", false)]
+		public async Task PackageVersions_ReturnsContentOrNotFound(string packageId, bool packageExists)
+		{
+			// setup
+			var mockPackageService = new Mock<IPackageService>();
+
+			mockPackageService.Setup(s => s.GetPackages())
+				.ReturnsAsync(() => new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, TestPackages));
+
+			mockPackageService.Setup(s => s.PackageVersions(packageId))
+				.ReturnsAsync(() =>
+				{
+					var searchResult = new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, TestPackages);
+					return packageExists ? searchResult : new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NotFound);
+				});
+
+			// Act
+			var controller = new PackageController(mockPackageService.Object);
+			var result = await controller.PackageVersions(packageId);
+
+			// Assert
+			if (packageExists)
+			{
+				var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+				var packages = Assert.IsAssignableFrom<IReadOnlyList<Package>>(
+					actionResult.Value);
+				Assert.NotNull(packages);
+				Assert.True(packages.Count == 2);
+			}
+			else
+			{
+				Assert.IsType<NotFoundObjectResult>(result.Result);
+			}
+		}
+
+		[Fact]
+		public async Task PackageVersions_ReturnsBadRequestResult_WhenModelStateIsInvalid()
+		{
+			// setup
+			var mockPackageService = new Mock<IPackageService>();
+			mockPackageService.Setup(s => s.PackageVersions(null))
+				.ReturnsAsync(new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.BadRequest));
+
+			// Act
+			var controller = new PackageController(mockPackageService.Object);
+			var result = await controller.PackageVersions(null);
+
+			// Assert
+			var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+			Assert.IsType<SerializableError>(badRequestResult.Value);
 		}
 
 		/// <summary>
@@ -173,6 +228,13 @@ namespace LocalNugetFeed.Web.Tests
 				Description = "Package description",
 				Authors = "D.B.",
 				Version = "1.0.0"
+			},
+			new Package()
+			{
+				Id = "MyTestPackage",
+				Description = "Package description",
+				Authors = "D.B.",
+				Version = "1.0.1"
 			}
 		};
 	}

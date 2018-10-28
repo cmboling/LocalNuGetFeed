@@ -17,7 +17,6 @@ namespace LocalNugetFeed.Core.Services
 	{
 		private readonly IPackageFileStorageService _storageService;
 		private readonly IPackageSessionService _sessionService;
-		private IReadOnlyList<Package> Packages => _sessionService.Get() ?? new List<Package>();
 
 		public PackageService(IPackageFileStorageService storageService, IPackageSessionService sessionService)
 		{
@@ -46,7 +45,7 @@ namespace LocalNugetFeed.Core.Services
 						var packageNuspec = reader.NuspecReader;
 
 						// step 1. we should make sure that package doesn't exists in local feed
-						var package = Get(packageNuspec.PackageId(), packageNuspec.PackageVersion());
+						var package = await Get(packageNuspec.PackageId(), packageNuspec.PackageVersion());
 						if (package != null)
 						{
 							return new ResponseModel(HttpStatusCode.BadRequest, "Package already exists");
@@ -80,15 +79,20 @@ namespace LocalNugetFeed.Core.Services
 		/// <param name="id">package id</param>
 		/// <param name="version">package version</param>
 		/// <returns>response with result</returns>		
-		public Package Get(string id, string version)
+		public async Task<ResponseModel<Package>> Get(string id, string version)
 		{
-			if (!Packages.Any()) return null;
+			var localFeedPackagesResult = await GetPackages();
 
-			var package = Packages.FirstOrDefault(x =>
+			if (!localFeedPackagesResult.Success)
+			{
+				return new ResponseModel<Package>(localFeedPackagesResult.StatusCode, localFeedPackagesResult.Message);
+			}
+
+			var package = localFeedPackagesResult.Data.FirstOrDefault(x =>
 				x.Id.Equals(id, StringComparison.InvariantCultureIgnoreCase) &&
 				x.Version.Equals(version, StringComparison.InvariantCultureIgnoreCase));
 
-			return package;
+			return new ResponseModel<Package>(HttpStatusCode.OK, package);
 		}
 
 		/// <summary>
@@ -96,15 +100,22 @@ namespace LocalNugetFeed.Core.Services
 		/// </summary>
 		/// <param name="id">package id</param>
 		/// <returns>response with result</returns>		
-		public ResponseModel<IReadOnlyList<Package>> PackageVersions(string id)
+		public async Task<ResponseModel<IReadOnlyList<Package>>> PackageVersions(string id)
 		{
-			if (!Packages.Any())
+			var localFeedPackagesResult = await GetPackages();
+
+			if (!localFeedPackagesResult.Success)
 			{
-				return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.BadRequest, "Packages storage is empty");
+				return new ResponseModel<IReadOnlyList<Package>>(localFeedPackagesResult.StatusCode, localFeedPackagesResult.Message);
 			}
 
-			var packageVersions = Packages.Where(x =>
+			var packageVersions = localFeedPackagesResult.Data.Where(x =>
 				x.Id.Equals(id, StringComparison.InvariantCultureIgnoreCase)).ToList();
+
+			if (!packageVersions.Any())
+			{
+				return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NotFound, $"Package [{id}] not found");
+			}
 
 			return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, packageVersions);
 		}
@@ -118,53 +129,74 @@ namespace LocalNugetFeed.Core.Services
 		public async Task<ResponseModel<IReadOnlyList<Package>>> Search(string query = null)
 		{
 			// before we should check packages in session and use their if are exist there
-			if (!Packages.Any())
+			var localFeedPackagesResult = await GetPackages();
+
+			if (!localFeedPackagesResult.Success)
 			{
-				ResponseModel<IReadOnlyList<Package>> filesReadResult;
-				// otherwise we need to load packages from file system
-				try
-				{
-					filesReadResult = await Task.FromResult(_storageService.Read());
-				}
-				catch (Exception)
-				{
-					return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.InternalServerError);
-				}
-
-				if (!filesReadResult.Success)
-				{
-					return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.BadRequest, filesReadResult.Message);
-				}
-
-				var packages = filesReadResult.Data.ToList();
-
-				if (packages.Any())
-				{
-					//update packages in session storage
-					_sessionService.Set(packages);
-				}
-				else
-				{
-					return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NoContent);
-				}
+				return new ResponseModel<IReadOnlyList<Package>>(localFeedPackagesResult.StatusCode, localFeedPackagesResult.Message);
 			}
 
-			var searchResult = new List<Package>(Packages);
+			var searchResult = new List<Package>(localFeedPackagesResult.Data);
 			if (!string.IsNullOrEmpty(query))
 			{
 				query = query.ToLowerInvariant();
 				searchResult = searchResult.Where(x => x.Id.ToLowerInvariant().Contains(query) || x.Description.ToLowerInvariant().Contains(query)).ToList();
 				if (!searchResult.Any())
 				{
-					return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NoContent);
+					return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NotFound, "No any packages matching to your request");
 				}
 			}
-			
+
 			searchResult = searchResult.OrderByDescending(s => new NuGetVersion(s.Version))
 				.GroupBy(g => g.Id)
 				.Select(z => z.First()).ToList();
 
 			return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, searchResult);
+		}
+
+		/// <summary>
+		/// Get packages from session or file system
+		/// </summary>
+		/// <returns>response with result</returns>
+		public async Task<ResponseModel<IReadOnlyList<Package>>> GetPackages()
+		{
+			var sessionFeedPackages = _sessionService.Get();
+
+			if (sessionFeedPackages != null && sessionFeedPackages.Any())
+			{
+				return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, sessionFeedPackages);
+			}
+
+			ResponseModel<IReadOnlyList<Package>> filesReadResult;
+
+			// otherwise we need to load packages from file system
+			try
+			{
+				filesReadResult = await Task.FromResult(_storageService.Read());
+			}
+			catch (Exception)
+			{
+				return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.InternalServerError);
+			}
+
+			if (!filesReadResult.Success)
+			{
+				return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.BadRequest, filesReadResult.Message);
+			}
+
+			var packages = filesReadResult.Data.ToList();
+
+			if (packages.Any())
+			{
+				//update packages in session storage
+				_sessionService.Set(packages);
+			}
+			else
+			{
+				return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NotFound, "Packages feed is empty");
+			}
+
+			return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, packages);
 		}
 	}
 }
