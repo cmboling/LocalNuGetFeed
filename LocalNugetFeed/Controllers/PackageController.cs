@@ -29,7 +29,7 @@ namespace LocalNugetFeed.Controllers
 		/// <returns>Status of push request</returns>
 		[HttpPut]
 		[ProducesResponseType(400, Type = typeof(BadRequestObjectResult))]
-		public async Task<ActionResult<ResponseModel>> Push([BindRequired, FromBody] IFormFile package)
+		public async Task<ActionResult<ResponseModel>> Push([FromForm] IFormFile package)
 		{
 			var result = await _packageService.Push(package);
 
@@ -40,7 +40,7 @@ namespace LocalNugetFeed.Controllers
 
 			return BadRequest(result.Message ?? DefaultErrorMessage);
 		}
-
+		
 		/// <summary>
 		/// Get packages from local feed 
 		/// </summary>
@@ -76,11 +76,6 @@ namespace LocalNugetFeed.Controllers
 		[ProducesResponseType(400, Type = typeof(BadRequestObjectResult))]
 		public async Task<ActionResult<IReadOnlyList<Package>>> PackageVersions([BindRequired, FromRoute] string id)
 		{
-			if (string.IsNullOrWhiteSpace(id))
-			{
-				return BadRequest(ModelState);
-			}
-
 			var result = await _packageService.PackageVersions(id);
 
 			if (result.Success)

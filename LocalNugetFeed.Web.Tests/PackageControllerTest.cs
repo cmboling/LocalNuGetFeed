@@ -2,13 +2,17 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using LocalNugetFeed.Controllers;
 using LocalNugetFeed.Core.Entities;
 using LocalNugetFeed.Core.Interfaces;
 using LocalNugetFeed.Core.Models;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NuGet.Versioning;
 using Xunit;
@@ -61,7 +65,7 @@ namespace LocalNugetFeed.Web.Tests
 			// setup
 			var mockPackageService = new Mock<IPackageService>();
 			mockPackageService.Setup(s => s.Search(null))
-				.ReturnsAsync(new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, TestPackages));
+				.ReturnsAsync(new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, TwoTestPackageVersions));
 
 			// Act
 			var controller = new PackageController(mockPackageService.Object);
@@ -73,7 +77,7 @@ namespace LocalNugetFeed.Web.Tests
 				actionResult.Value);
 			Assert.NotNull(packages);
 			Assert.True(packages.Any());
-			Assert.True(packages.First().Id == TestPackages.First().Id);
+			Assert.True(packages.First().Id == TwoTestPackageVersions.First().Id);
 		}
 
 		[Fact]
@@ -101,7 +105,7 @@ namespace LocalNugetFeed.Web.Tests
 		{
 			// setup
 			var searchResult = new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK,
-				new[] {TestPackages.OrderByDescending(x => new NuGetVersion(x.Version)).Last()});
+				new[] {TwoTestPackageVersions.OrderByDescending(x => new NuGetVersion(x.Version)).Last()});
 
 			var mockPackageService = new Mock<IPackageService>();
 			mockPackageService.Setup(s => s.Search(query))
@@ -119,6 +123,7 @@ namespace LocalNugetFeed.Web.Tests
 					actionResult.Value);
 				Assert.NotNull(packages);
 				Assert.True(packages.Any());
+				Assert.True(packages.Count == 1); // we should get only the latest version of TestPackage package
 				Assert.True(packages.First() == searchResult.Data.First());
 			}
 			else
@@ -152,12 +157,12 @@ namespace LocalNugetFeed.Web.Tests
 			var mockPackageService = new Mock<IPackageService>();
 
 			mockPackageService.Setup(s => s.GetPackages())
-				.ReturnsAsync(() => new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, TestPackages));
+				.ReturnsAsync(() => new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, TwoTestPackageVersions));
 
 			mockPackageService.Setup(s => s.PackageVersions(packageId))
 				.ReturnsAsync(() =>
 				{
-					var searchResult = new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, TestPackages);
+					var searchResult = new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, TwoTestPackageVersions);
 					return packageExists ? searchResult : new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NotFound);
 				});
 
@@ -172,7 +177,7 @@ namespace LocalNugetFeed.Web.Tests
 				var packages = Assert.IsAssignableFrom<IReadOnlyList<Package>>(
 					actionResult.Value);
 				Assert.NotNull(packages);
-				Assert.True(packages.Count == 2);
+				Assert.True(packages.Count == 2); // we should get both versions of TestPackage package
 			}
 			else
 			{
@@ -181,7 +186,7 @@ namespace LocalNugetFeed.Web.Tests
 		}
 
 		[Fact]
-		public async Task PackageVersions_ReturnsBadRequestResult_WhenModelStateIsInvalid()
+		public async Task PackageVersions_ReturnsBadRequestResult_WhenPackageIdIsUndefined()
 		{
 			// setup
 			var mockPackageService = new Mock<IPackageService>();
@@ -193,9 +198,114 @@ namespace LocalNugetFeed.Web.Tests
 			var result = await controller.PackageVersions(null);
 
 			// Assert
-			var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
-			Assert.IsType<SerializableError>(badRequestResult.Value);
+			Assert.IsType<BadRequestObjectResult>(result.Result);
 		}
+
+		#region unit tests with routing
+
+		[Theory]
+		[InlineData(null, HttpStatusCode.OK)]
+		[InlineData("test", HttpStatusCode.OK)]
+		[InlineData("Unknown", HttpStatusCode.NotFound)]
+		public async Task Get_GetHttpRequest_ReturnsResponseAccordingWithRequest(string query, HttpStatusCode statusCode)
+		{
+			// setup
+			var mockPackageService = new Mock<IPackageService>();
+			mockPackageService.Setup(s => s.Search(query))
+				.ReturnsAsync(new ResponseModel<IReadOnlyList<Package>>(statusCode,
+					TwoTestPackageVersions.Where(x => string.IsNullOrWhiteSpace(query) || x.Id.Contains(query)).ToList()));
+			// Act
+			TestServer server = new TestServer(new WebHostBuilder()
+				.UseStartup<Startup>()
+				.ConfigureTestServices(services => { services.AddSingleton(mockPackageService.Object); }));
+
+			var client = server.CreateClient();
+
+			var response = await client.GetAsync(!string.IsNullOrWhiteSpace(query) ? $"?q={query}" : "");
+			//Assert
+			Assert.Equal(statusCode, response.StatusCode);
+		}
+
+		[Fact]
+		public async Task Push_PutHttpRequest_AddPackageToLocalFeed_ReturnsSuccessfulResponse()
+		{
+			var _mockFile = GetMockFile();
+			// setup
+			var mockPackageService = new Mock<IPackageService>();
+			mockPackageService.Setup(s => s.Push(It.IsAny<IFormFile>()))
+				.ReturnsAsync(new ResponseModel(HttpStatusCode.OK));
+
+			// Act
+
+			TestServer server = new TestServer(new WebHostBuilder()
+				.UseStartup<Startup>()
+				.ConfigureTestServices(services => { services.AddSingleton(mockPackageService.Object); }));
+
+			var client = server.CreateClient();
+
+			using (var content = new MultipartFormDataContent())
+			{
+				content.Add(new StreamContent(_mockFile.OpenReadStream())
+				{
+					Headers =
+					{
+						ContentLength = _mockFile.Length
+					}
+				}, "package", _mockFile.FileName);
+
+				var response = await client.PutAsync(Core.Common.Constants.NuGetPushRelativeUrl, content);
+
+				//Assert
+				Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+			}
+		}
+
+		[Fact]
+		public async Task Push_PutHttpRequest_AddNullableFileToLocalFeed_ReturnsBadRequestResponse()
+		{
+			// setup
+			var mockPackageService = new Mock<IPackageService>();
+			mockPackageService.Setup(s => s.Push(null))
+				.ReturnsAsync(new ResponseModel(HttpStatusCode.BadRequest));
+
+			// Act
+
+			TestServer server = new TestServer(new WebHostBuilder()
+				.UseStartup<Startup>()
+				.ConfigureTestServices(services => { services.AddSingleton(mockPackageService.Object); }));
+
+			var client = server.CreateClient();
+
+			var response = await client.PutAsync(Core.Common.Constants.NuGetPushRelativeUrl, null);
+
+			//Assert
+			Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+		}
+
+		[Theory]
+		[InlineData("MyTestPackage", HttpStatusCode.OK)]
+		[InlineData("Unknown", HttpStatusCode.NotFound)]
+		public async Task Package_GetHttpRequest_ReturnsResponseAccordingWithRequest(string packageId, HttpStatusCode statusCode)
+		{
+			// setup
+			var mockPackageService = new Mock<IPackageService>();
+			mockPackageService.Setup(s => s.PackageVersions(packageId))
+				.ReturnsAsync(new ResponseModel<IReadOnlyList<Package>>(statusCode,
+					TwoTestPackageVersions.Where(x => x.Id.Contains(packageId)).ToList()));
+
+			// Act
+			TestServer server = new TestServer(new WebHostBuilder()
+				.UseStartup<Startup>()
+				.ConfigureTestServices(services => { services.AddSingleton(mockPackageService.Object); }));
+
+			var client = server.CreateClient();
+			var response = await client.GetAsync($"package/{packageId}");
+
+			// Assert
+			Assert.Equal(statusCode, response.StatusCode);
+		}
+
+		#endregion
 
 		/// <summary>
 		/// Setup mock file using a memory stream
@@ -220,7 +330,7 @@ namespace LocalNugetFeed.Web.Tests
 			return fileMock.Object;
 		}
 
-		private static IReadOnlyList<Package> TestPackages => new List<Package>()
+		private static IReadOnlyList<Package> TwoTestPackageVersions => new List<Package>()
 		{
 			new Package()
 			{

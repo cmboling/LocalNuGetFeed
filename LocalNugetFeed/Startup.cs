@@ -83,11 +83,11 @@ namespace LocalNugetFeed
 			// todo: register api key for nuget push operation
 			
 			app.UseSession();
+			app.UseStaticFiles();
 			app.UseStatusCodePages();
 			app.UseHttpsRedirection();
 			app.UseMvc(routes =>
 			{
-				
 				// Service index
 				routes.MapRoute("index", "v3/index.json", defaults: new { controller = "Index", action = nameof(IndexController.Get)});
 

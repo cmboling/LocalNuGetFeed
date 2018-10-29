@@ -102,6 +102,11 @@ namespace LocalNugetFeed.Core.Services
 		/// <returns>response with result</returns>		
 		public async Task<ResponseModel<IReadOnlyList<Package>>> PackageVersions(string id)
 		{
+			if (string.IsNullOrWhiteSpace(id))
+			{
+				return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.BadRequest, "Package id is undefined");
+			}
+			
 			var localFeedPackagesResult = await GetPackages();
 
 			if (!localFeedPackagesResult.Success)
