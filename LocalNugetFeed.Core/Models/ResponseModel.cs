@@ -1,3 +1,4 @@
+using System;
 using System.Net;
 using Newtonsoft.Json;
 
@@ -29,12 +30,14 @@ namespace LocalNugetFeed.Core.Models
 	{
 		public string Message { get; }
 		public HttpStatusCode StatusCode { get; }
-		public bool Success => StatusCode == HttpStatusCode.OK;
+		public bool Success => StatusCode == HttpStatusCode.OK && ExceptionDetails == null;
+		public Exception ExceptionDetails{ get; }
 
-		public ResponseModel(HttpStatusCode statusCode, string message = null)
+		public ResponseModel(HttpStatusCode statusCode, string message = null, Exception exceptionDetails = null)
 		{
 			Message = message;
 			StatusCode = statusCode;
+			ExceptionDetails = exceptionDetails;
 		}
 	}
 }

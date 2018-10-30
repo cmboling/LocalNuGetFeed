@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LocalNugetFeed.Core", "Loca
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LocalNugetFeed.Web.Tests", "LocalNugetFeed.Web.Tests\LocalNugetFeed.Web.Tests.csproj", "{EAAAB12B-EA2E-4B95-9FEE-DBE85D663DB1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LocalNuGetFeed.Core.Tests", "LocalNuGetFeed.Core.Tests\LocalNuGetFeed.Core.Tests.csproj", "{1739D5A2-F273-4519-BBF3-601FBF217FC9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{EAAAB12B-EA2E-4B95-9FEE-DBE85D663DB1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EAAAB12B-EA2E-4B95-9FEE-DBE85D663DB1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EAAAB12B-EA2E-4B95-9FEE-DBE85D663DB1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1739D5A2-F273-4519-BBF3-601FBF217FC9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1739D5A2-F273-4519-BBF3-601FBF217FC9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1739D5A2-F273-4519-BBF3-601FBF217FC9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1739D5A2-F273-4519-BBF3-601FBF217FC9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -47,16 +47,14 @@ namespace LocalNugetFeed.Web.Tests
 		{
 			// setup
 			var mockPackageService = new Mock<IPackageService>();
-			const string failedResponseText = "Failed";
 			mockPackageService.Setup(s => s.Push(null))
-				.ReturnsAsync(new ResponseModel(HttpStatusCode.BadRequest, failedResponseText));
+				.ReturnsAsync(new ResponseModel(HttpStatusCode.BadRequest));
 			// Act
 			var controller = new PackageController(mockPackageService.Object);
 			var result = await controller.Push(null);
 
 			// Assert
-			var actionResult = Assert.IsType<BadRequestObjectResult>(result.Result);
-			Assert.Equal(actionResult.Value, failedResponseText);
+			Assert.IsType<BadRequestObjectResult>(result.Result);
 		}
 
 		[Fact]

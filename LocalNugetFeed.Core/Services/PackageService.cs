@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -45,10 +46,10 @@ namespace LocalNugetFeed.Core.Services
 						var packageNuspec = reader.NuspecReader;
 
 						// step 1. we should make sure that package doesn't exists in local feed
-						var package = await Get(packageNuspec.PackageId(), packageNuspec.PackageVersion());
-						if (package != null)
+						var getPackageResult = await Get(packageNuspec.PackageId(), packageNuspec.PackageVersion());
+						if (getPackageResult.Success && getPackageResult.Data != null)
 						{
-							return new ResponseModel(HttpStatusCode.BadRequest, "Package already exists");
+							return new ResponseModel(HttpStatusCode.Conflict, $"Package {getPackageResult.Data.Id} v{getPackageResult.Data.Version} already exists in feed");
 						}
 
 						// step 2. Save package locally to the feed			
@@ -66,9 +67,13 @@ namespace LocalNugetFeed.Core.Services
 					}
 				}
 			}
-			catch (Exception)
+			catch (InvalidDataException e)
 			{
-				return new ResponseModel(HttpStatusCode.InternalServerError, "Unable to push package");
+				return new ResponseModel(HttpStatusCode.UnsupportedMediaType, "Invalid NuGet package file", e);
+			}
+			catch (Exception e)
+			{
+				return new ResponseModel(HttpStatusCode.InternalServerError, "Server error. Unable to push package file", e);
 			}
 		}
 
