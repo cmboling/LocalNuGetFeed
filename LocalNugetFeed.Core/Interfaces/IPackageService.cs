@@ -21,7 +21,7 @@ namespace LocalNugetFeed.Core.Interfaces
 		/// <param name="id">package id</param>
 		/// <param name="version">package version</param>
 		/// <returns>response with result</returns>	
-		Task<ResponseModel<Package>> Get(string id, string version);
+		Task<ResponseModel<Package>> GetPackage(string id, string version);
 
 		/// <summary>
 		/// Get package(s) by id

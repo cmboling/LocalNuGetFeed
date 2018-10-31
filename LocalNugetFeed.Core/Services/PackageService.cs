@@ -46,10 +46,11 @@ namespace LocalNugetFeed.Core.Services
 						var packageNuspec = reader.NuspecReader;
 
 						// step 1. we should make sure that package doesn't exists in local feed
-						var getPackageResult = await Get(packageNuspec.PackageId(), packageNuspec.PackageVersion());
+						var getPackageResult = await GetPackage(packageNuspec.PackageId(), packageNuspec.PackageVersion());
 						if (getPackageResult.Success && getPackageResult.Data != null)
 						{
-							return new ResponseModel(HttpStatusCode.Conflict, $"Package {getPackageResult.Data.Id} v{getPackageResult.Data.Version} already exists in feed");
+							return new ResponseModel(HttpStatusCode.Conflict,
+								$"Package {getPackageResult.Data.Id} v{getPackageResult.Data.Version} already exists in feed");
 						}
 
 						// step 2. Save package locally to the feed			
@@ -84,7 +85,7 @@ namespace LocalNugetFeed.Core.Services
 		/// <param name="id">package id</param>
 		/// <param name="version">package version</param>
 		/// <returns>response with result</returns>		
-		public async Task<ResponseModel<Package>> Get(string id, string version)
+		public async Task<ResponseModel<Package>> GetPackage(string id, string version)
 		{
 			var localFeedPackagesResult = await GetPackages();
 
@@ -94,10 +95,10 @@ namespace LocalNugetFeed.Core.Services
 			}
 
 			var package = localFeedPackagesResult.Data.FirstOrDefault(x =>
-				x.Id.Equals(id, StringComparison.InvariantCultureIgnoreCase) &&
-				x.Version.Equals(version, StringComparison.InvariantCultureIgnoreCase));
+				x.Id.Equals(id, StringComparison.OrdinalIgnoreCase) &&
+				x.Version.Equals(version, StringComparison.OrdinalIgnoreCase));
 
-			return new ResponseModel<Package>(HttpStatusCode.OK, package);
+			return package == null ? new ResponseModel<Package>(HttpStatusCode.NotFound) : new ResponseModel<Package>(HttpStatusCode.OK, package);
 		}
 
 		/// <summary>
@@ -111,7 +112,7 @@ namespace LocalNugetFeed.Core.Services
 			{
 				return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.BadRequest, "Package id is undefined");
 			}
-			
+
 			var localFeedPackagesResult = await GetPackages();
 
 			if (!localFeedPackagesResult.Success)
@@ -120,7 +121,7 @@ namespace LocalNugetFeed.Core.Services
 			}
 
 			var packageVersions = localFeedPackagesResult.Data.Where(x =>
-				x.Id.Equals(id, StringComparison.InvariantCultureIgnoreCase)).ToList();
+				x.Id.Equals(id, StringComparison.OrdinalIgnoreCase)).ToList();
 
 			if (!packageVersions.Any())
 			{
@@ -149,8 +150,7 @@ namespace LocalNugetFeed.Core.Services
 			var searchResult = new List<Package>(localFeedPackagesResult.Data);
 			if (!string.IsNullOrEmpty(query))
 			{
-				query = query.ToLowerInvariant();
-				searchResult = searchResult.Where(x => x.Id.ToLowerInvariant().Contains(query) || x.Description.ToLowerInvariant().Contains(query)).ToList();
+				searchResult = searchResult.Where(x => x.Id.Contains(query, StringComparison.OrdinalIgnoreCase) || x.Description.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
 				if (!searchResult.Any())
 				{
 					return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NotFound, "No any packages matching to your request");
@@ -189,24 +189,15 @@ namespace LocalNugetFeed.Core.Services
 				return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.InternalServerError);
 			}
 
-			if (!filesReadResult.Success)
-			{
-				return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.BadRequest, filesReadResult.Message);
-			}
-
-			var packages = filesReadResult.Data.ToList();
-
-			if (packages.Any())
-			{
-				//update packages in session storage
-				_sessionService.Set(packages);
-			}
-			else
+			if (!filesReadResult.Success || filesReadResult.Data == null)
 			{
 				return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NotFound, "Packages feed is empty");
 			}
 
-			return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, packages);
+			//update packages in session storage
+			_sessionService.Set(filesReadResult.Data);
+
+			return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, filesReadResult.Data);
 		}
 	}
 }

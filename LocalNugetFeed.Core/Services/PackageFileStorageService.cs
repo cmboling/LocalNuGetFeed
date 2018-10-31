@@ -87,8 +87,8 @@ namespace LocalNugetFeed.Core.Services
 					}
 				}
 			}
-
-			return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, result);
+			
+			return result.Any() ? new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, result) : new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NotFound, "Packages feed is empty");
 		}
 
 		private static Package MapNuspecDataToPackage(NuspecReader packageNuspec)
