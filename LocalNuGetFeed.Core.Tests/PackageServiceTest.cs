@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using LocalNugetFeed.Core.Entities;
@@ -19,11 +21,13 @@ namespace LocalNuGetFeed.Core.Tests
 		private readonly Mock<IPackageSessionService> _mockPackageSessionService;
 		private string _getOSVersionPackageName = "GetOSVersion";
 		private string _getOSVersionPackageVersion = "1.0.0";
-		
+		private PackageService _packageService;
+
 		public PackageServiceTest()
 		{
 			_mockPackageFileStorageService = new Mock<IPackageFileStorageService>();
 			_mockPackageSessionService = new Mock<IPackageSessionService>();
+			_packageService = new PackageService(_mockPackageFileStorageService.Object, _mockPackageSessionService.Object);
 		}
 
 		[Fact]
@@ -43,12 +47,10 @@ namespace LocalNuGetFeed.Core.Tests
 				_mockPackageSessionService.Setup(s => s.Get()).Returns(() => new[] {GetMockPackage()});
 
 				// Act
-				var packageService = new PackageService(_mockPackageFileStorageService.Object, _mockPackageSessionService.Object);
-				var result = await packageService.Push(_mockFile);
+				var result = await _packageService.Push(_mockFile);
 
 				// Assert
 				Assert.True(result.Success);
-				Assert.True(result.StatusCode == HttpStatusCode.OK);
 			}
 		}
 		
@@ -92,13 +94,26 @@ namespace LocalNuGetFeed.Core.Tests
 		[Fact]
 		public async Task Push_ReturnsFailedResponse_PackageFileIsIncorrect()
 		{
-			var packageService = new PackageService(_mockPackageFileStorageService.Object, _mockPackageSessionService.Object);
-
-			var result = await packageService.Push(GetMockFile("some content", "wrongPackageFileExtension.txt"));
+			var result = await _packageService.Push(GetMockFile("some content", "wrongPackageFileExtension.txt"));
 			// Assert
 			Assert.False(result.Success);
 			Assert.True(result.StatusCode == HttpStatusCode.UnsupportedMediaType);
 			Assert.IsType<InvalidDataException>(result.ExceptionDetails);
+		}
+		
+		[Fact]
+		public async Task Search_ReturnsPackagesFilteredByVersionDesc_WhenQueryIsEmpty()
+		{
+			// setup
+			_mockPackageSessionService.Setup(s => s.Get()).Returns(() => TwoTestPackageVersions);
+
+			// Act
+			var result = await _packageService.Search();
+
+			// Assert
+			Assert.True(result.Success);
+			Assert.True(result.Data.Any());
+			Assert.NotNull(result.Data.Single());
 		}
 
 
@@ -114,6 +129,25 @@ namespace LocalNuGetFeed.Core.Tests
 
 			return null;
 		}
+		
+		
+		private static IReadOnlyList<Package> TwoTestPackageVersions => new List<Package>()
+		{
+			new Package()
+			{
+				Id = "MyTestPackage",
+				Description = "Package description",
+				Authors = "D.B.",
+				Version = "1.0.0"
+			},
+			new Package()
+			{
+				Id = "MyTestPackage",
+				Description = "Package description",
+				Authors = "D.B.",
+				Version = "1.0.1"
+			}
+		};
 
 		private Package GetMockPackage()
 		{

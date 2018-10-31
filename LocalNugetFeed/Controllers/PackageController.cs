@@ -42,14 +42,14 @@ namespace LocalNugetFeed.Controllers
 		}
 		
 		/// <summary>
-		/// Get packages from local feed 
+		/// Search throw all packages in local feed 
 		/// </summary>
 		/// <param name="query">search query (optional)</param>
 		/// <returns></returns>
 		[Route("{q?}")]
 		[ProducesResponseType(404, Type = typeof(NotFoundObjectResult))]
 		[ProducesResponseType(400, Type = typeof(BadRequestObjectResult))]
-		public async Task<ActionResult<IReadOnlyList<Package>>> Get([FromQuery(Name = "q")] string query = null)
+		public async Task<ActionResult<IReadOnlyList<Package>>> Search([FromQuery(Name = "q")] string query = null)
 		{
 			var searchResult = await _packageService.Search(query);
 

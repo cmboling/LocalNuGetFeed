@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -14,6 +15,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using Newtonsoft.Json;
 using NuGet.Versioning;
 using Xunit;
 
@@ -58,16 +60,17 @@ namespace LocalNugetFeed.Web.Tests
 		}
 
 		[Fact]
-		public async Task Get_ReturnsContent_WhenQueryIsEmpty()
+		public async Task Search_ReturnsPackagesFilteredByVersionDesc_WhenQueryIsEmpty()
 		{
 			// setup
 			var mockPackageService = new Mock<IPackageService>();
+			var lastVersionPackage = TwoTestPackageVersions.OrderByDescending(x => new NuGetVersion(x.Version)).Last();
 			mockPackageService.Setup(s => s.Search(null))
-				.ReturnsAsync(new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, TwoTestPackageVersions));
+				.ReturnsAsync(new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, new[] {lastVersionPackage}));
 
 			// Act
 			var controller = new PackageController(mockPackageService.Object);
-			var result = await controller.Get();
+			var result = await controller.Search();
 
 			// Assert
 			var actionResult = Assert.IsType<OkObjectResult>(result.Result);
@@ -75,11 +78,12 @@ namespace LocalNugetFeed.Web.Tests
 				actionResult.Value);
 			Assert.NotNull(packages);
 			Assert.True(packages.Any());
-			Assert.True(packages.First().Id == TwoTestPackageVersions.First().Id);
+			var testPackage = packages.Single();
+			Assert.True(testPackage.Version == lastVersionPackage.Version);
 		}
 
 		[Fact]
-		public async Task Get_ReturnsBadRequestResult()
+		public async Task Search_ReturnsBadRequestResult()
 		{
 			// setup
 			var mockPackageService = new Mock<IPackageService>();
@@ -88,7 +92,7 @@ namespace LocalNugetFeed.Web.Tests
 
 			// Act
 			var controller = new PackageController(mockPackageService.Object);
-			var result = await controller.Get();
+			var result = await controller.Search();
 
 			// Assert
 			Assert.IsType<BadRequestObjectResult>(result.Result);
@@ -99,7 +103,7 @@ namespace LocalNugetFeed.Web.Tests
 		[InlineData("", true)]
 		[InlineData("TestPackage", true)]
 		[InlineData("UnknownPackage", false)]
-		public async Task Get_ReturnsContentOrNot_WhenQueryIsExists(string query, bool isExist)
+		public async Task Search_ReturnsContentOrNot_WhenQueryIsExists(string query, bool isExist)
 		{
 			// setup
 			var searchResult = new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK,
@@ -111,7 +115,7 @@ namespace LocalNugetFeed.Web.Tests
 
 			// Act
 			var controller = new PackageController(mockPackageService.Object);
-			var result = await controller.Get(query);
+			var result = await controller.Search(query);
 
 			// Assert
 			if (isExist)
@@ -131,7 +135,7 @@ namespace LocalNugetFeed.Web.Tests
 		}
 
 		[Fact]
-		public async Task Get_ReturnsNotFound_WhenNoPackages()
+		public async Task Search_ReturnsNotFound_WhenNoPackages()
 		{
 			// setup
 			var mockPackageService = new Mock<IPackageService>();
@@ -140,7 +144,7 @@ namespace LocalNugetFeed.Web.Tests
 
 			// Act
 			var controller = new PackageController(mockPackageService.Object);
-			var result = await controller.Get();
+			var result = await controller.Search();
 
 			// Assert
 			Assert.IsType<NotFoundObjectResult>(result.Result);
@@ -205,13 +209,16 @@ namespace LocalNugetFeed.Web.Tests
 		[InlineData(null, HttpStatusCode.OK)]
 		[InlineData("test", HttpStatusCode.OK)]
 		[InlineData("Unknown", HttpStatusCode.NotFound)]
-		public async Task Get_GetHttpRequest_ReturnsResponseAccordingWithRequest(string query, HttpStatusCode statusCode)
+		public async Task Search_GetHttpRequest_ReturnsResponseAccordingWithRequest(string query, HttpStatusCode statusCode)
 		{
 			// setup
 			var mockPackageService = new Mock<IPackageService>();
+			var searchResult = TwoTestPackageVersions.Where(x => string.IsNullOrWhiteSpace(query) || x.Id.Contains(query, StringComparison.OrdinalIgnoreCase))
+				.OrderByDescending(s => new NuGetVersion(s.Version))
+				.GroupBy(g => g.Id)
+				.Select(z => z.First()).ToList();
 			mockPackageService.Setup(s => s.Search(query))
-				.ReturnsAsync(new ResponseModel<IReadOnlyList<Package>>(statusCode,
-					TwoTestPackageVersions.Where(x => string.IsNullOrWhiteSpace(query) || x.Id.Contains(query)).ToList()));
+				.ReturnsAsync(new ResponseModel<IReadOnlyList<Package>>(statusCode, searchResult));
 			// Act
 			TestServer server = new TestServer(new WebHostBuilder()
 				.UseStartup<Startup>()
@@ -221,7 +228,26 @@ namespace LocalNugetFeed.Web.Tests
 
 			var response = await client.GetAsync(!string.IsNullOrWhiteSpace(query) ? $"?q={query}" : "");
 			//Assert
+
 			Assert.Equal(statusCode, response.StatusCode);
+			var content = await response.Content.ReadAsStringAsync();
+			var packages = JsonConvert.DeserializeObject<IReadOnlyList<Package>>(content);
+
+			if (string.IsNullOrWhiteSpace(query))
+			{
+				Assert.Equal(packages.Count, searchResult.Count);
+			}
+			else
+			{
+				if (statusCode == HttpStatusCode.OK)
+				{
+					Assert.NotNull(packages.Single());
+				}
+				else
+				{
+					Assert.Equal(HttpStatusCode.NotFound, statusCode);
+				}
+			}
 		}
 
 		[Fact]
@@ -283,7 +309,7 @@ namespace LocalNugetFeed.Web.Tests
 		[Theory]
 		[InlineData("MyTestPackage", HttpStatusCode.OK)]
 		[InlineData("Unknown", HttpStatusCode.NotFound)]
-		public async Task Package_GetHttpRequest_ReturnsResponseAccordingWithRequest(string packageId, HttpStatusCode statusCode)
+		public async Task PackageVersions_GetHttpRequest_ReturnsResponseAccordingWithRequest(string packageId, HttpStatusCode statusCode)
 		{
 			// setup
 			var mockPackageService = new Mock<IPackageService>();
@@ -298,9 +324,21 @@ namespace LocalNugetFeed.Web.Tests
 
 			var client = server.CreateClient();
 			var response = await client.GetAsync($"package/{packageId}");
-
+			var content = await response.Content.ReadAsStringAsync();
+			var packages = JsonConvert.DeserializeObject<IReadOnlyList<Package>>(content);
+			
 			// Assert
+			
 			Assert.Equal(statusCode, response.StatusCode);
+			if (statusCode == HttpStatusCode.OK)
+			{
+				Assert.True(packages.Any());
+				Assert.True(packages.Count == 2); //2 versions = 2 packages
+			}
+			else
+			{
+				Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+			}
 		}
 
 		#endregion
