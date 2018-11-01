@@ -19,7 +19,6 @@
 
     <ItemGroup>
       <None Remove="Packages\GetOSVersion.1.0.0.nupkg" />
-      <Resource Include="Packages\GetOSVersion.1.0.0.nupkg" />
     </ItemGroup>
 
 </Project>

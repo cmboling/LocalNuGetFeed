@@ -34,7 +34,7 @@ namespace LocalNugetFeed.Core.Services
 
 			Directory.CreateDirectory(packageFolderPath);
 
-			using (var destinationFileStream = File.Open($"{fullPackagePath}.nupkg", FileMode.CreateNew))
+			using (var destinationFileStream = File.Open($"{fullPackagePath}.nupkg", FileMode.CreateNew)) 
 			{
 				packageFileStream.Seek(0, SeekOrigin.Begin);
 
@@ -88,7 +88,7 @@ namespace LocalNugetFeed.Core.Services
 				}
 			}
 			
-			return result.Any() ? new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, result) : new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NotFound, "Packages feed is empty");
+			return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, result);
 		}
 
 		private static Package MapNuspecDataToPackage(NuspecReader packageNuspec)

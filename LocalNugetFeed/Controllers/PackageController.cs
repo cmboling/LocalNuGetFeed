@@ -33,12 +33,17 @@ namespace LocalNugetFeed.Controllers
 		{
 			var result = await _packageService.Push(package);
 
-			if (result.Success)
+			switch (result.StatusCode)
 			{
-				return Ok(result);
+				case HttpStatusCode.OK:
+					return Ok(result);
+				case HttpStatusCode.NotFound:
+					return NotFound(result.Message);
+				case HttpStatusCode.Conflict:
+					return Conflict(result.Message);
+				default:
+					return BadRequest(result.Message ?? DefaultErrorMessage);
 			}
-
-			return BadRequest(result.Message ?? DefaultErrorMessage);
 		}
 		
 		/// <summary>
@@ -53,17 +58,15 @@ namespace LocalNugetFeed.Controllers
 		{
 			var searchResult = await _packageService.Search(query);
 
-			if (searchResult.Success)
+			switch (searchResult.StatusCode)
 			{
-				return Ok(searchResult.Data);
+				case HttpStatusCode.OK:
+					return Ok(searchResult.Data);
+				case HttpStatusCode.NotFound:
+					return NotFound(searchResult.Message);
+				default:
+					return BadRequest(searchResult.Message ?? DefaultErrorMessage);
 			}
-
-			if (searchResult.StatusCode.Equals(HttpStatusCode.NotFound))
-			{
-				return NotFound(searchResult.Message);
-			}
-
-			return BadRequest(searchResult.Message ?? DefaultErrorMessage);
 		}
 
 		/// <summary>
@@ -78,17 +81,15 @@ namespace LocalNugetFeed.Controllers
 		{
 			var result = await _packageService.PackageVersions(id);
 
-			if (result.Success)
+			switch (result.StatusCode)
 			{
-				return Ok(result.Data);
+				case HttpStatusCode.OK:
+					return Ok(result.Data);
+				case HttpStatusCode.NotFound:
+					return NotFound(result.Message);
+				default:
+					return BadRequest(result.Message ?? DefaultErrorMessage);
 			}
-
-			if (result.StatusCode.Equals(HttpStatusCode.NotFound))
-			{
-				return NotFound(result.Message);
-			}
-
-			return BadRequest(result.Message ?? DefaultErrorMessage);
 		}
 	}
 }

@@ -98,7 +98,9 @@ namespace LocalNugetFeed.Core.Services
 				x.Id.Equals(id, StringComparison.OrdinalIgnoreCase) &&
 				x.Version.Equals(version, StringComparison.OrdinalIgnoreCase));
 
-			return package == null ? new ResponseModel<Package>(HttpStatusCode.NotFound) : new ResponseModel<Package>(HttpStatusCode.OK, package);
+			return package == null
+				? new ResponseModel<Package>(HttpStatusCode.NotFound, $"Package [{id}] not found")
+				: new ResponseModel<Package>(HttpStatusCode.OK, package);
 		}
 
 		/// <summary>
@@ -121,7 +123,7 @@ namespace LocalNugetFeed.Core.Services
 			}
 
 			var packageVersions = localFeedPackagesResult.Data.Where(x =>
-				x.Id.Equals(id, StringComparison.OrdinalIgnoreCase)).ToList();
+				x.Id.Equals(id, StringComparison.OrdinalIgnoreCase)).OrderByDescending(z => new NuGetVersion(z.Version)).ToList();
 
 			if (!packageVersions.Any())
 			{
@@ -150,7 +152,8 @@ namespace LocalNugetFeed.Core.Services
 			var searchResult = new List<Package>(localFeedPackagesResult.Data);
 			if (!string.IsNullOrEmpty(query))
 			{
-				searchResult = searchResult.Where(x => x.Id.Contains(query, StringComparison.OrdinalIgnoreCase) || x.Description.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
+				searchResult = searchResult.Where(x =>
+					x.Id.Contains(query, StringComparison.OrdinalIgnoreCase) || x.Description.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
 				if (!searchResult.Any())
 				{
 					return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NotFound, "No any packages matching to your request");
@@ -189,13 +192,16 @@ namespace LocalNugetFeed.Core.Services
 				return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.InternalServerError);
 			}
 
-			if (!filesReadResult.Success || filesReadResult.Data == null)
+			if (!filesReadResult.Success)
 			{
-				return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NotFound, "Packages feed is empty");
+				return new ResponseModel<IReadOnlyList<Package>>(filesReadResult.StatusCode, filesReadResult.Message);
 			}
 
-			//update packages in session storage
-			_sessionService.Set(filesReadResult.Data);
+			if (filesReadResult.Data.Any())
+			{
+				//update packages in session storage
+				_sessionService.Set(filesReadResult.Data);
+			}
 
 			return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, filesReadResult.Data);
 		}

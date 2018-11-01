@@ -22,7 +22,7 @@ namespace LocalNugetFeed.Core.Services
 		/// <returns></returns>
 		public IReadOnlyList<Package> Get()
 		{
-			return _session.Get<IReadOnlyList<Package>>(Constants.PackagesSessionCookieKey);
+			return _session.Get<IReadOnlyList<Package>>(Constants.PackagesSessionCookieKey) ?? new List<Package>();
 		}
 
 		/// <summary>
@@ -31,7 +31,10 @@ namespace LocalNugetFeed.Core.Services
 		/// <param name="packages">packages</param>
 		public void Set(IEnumerable<Package> packages)
 		{
-			_session.Set(Constants.PackagesSessionCookieKey, packages);
+			if (packages != null)
+			{
+				_session.Set(Constants.PackagesSessionCookieKey, packages);
+			}
 		}
 		
 		/// <summary>

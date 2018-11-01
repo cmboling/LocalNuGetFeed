@@ -9,6 +9,7 @@ using LocalNugetFeed.Controllers;
 using LocalNugetFeed.Core.Entities;
 using LocalNugetFeed.Core.Interfaces;
 using LocalNugetFeed.Core.Models;
+using LocalNugetFeed.Core.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -23,17 +24,23 @@ namespace LocalNugetFeed.Web.Tests
 {
 	public class PackageControllerTest
 	{
+		private readonly Mock<IPackageService> _mockPackageService;
+
+		public PackageControllerTest()
+		{
+			_mockPackageService = new Mock<IPackageService>();
+		}
+
 		[Fact]
 		public async Task Push_ReturnsSuccessfulResponse()
 		{
 			var _mockFile = GetMockFile();
 			// setup
-			var mockPackageService = new Mock<IPackageService>();
-			mockPackageService.Setup(s => s.Push(_mockFile))
+			_mockPackageService.Setup(s => s.Push(_mockFile))
 				.ReturnsAsync(new ResponseModel(HttpStatusCode.OK));
 
 			// Act
-			var controller = new PackageController(mockPackageService.Object);
+			var controller = new PackageController(_mockPackageService.Object);
 			var result = await controller.Push(_mockFile);
 
 			// Assert
@@ -48,11 +55,10 @@ namespace LocalNugetFeed.Web.Tests
 		public async Task Push_ReturnsFailedResponse_PackageFileIsNull()
 		{
 			// setup
-			var mockPackageService = new Mock<IPackageService>();
-			mockPackageService.Setup(s => s.Push(null))
+			_mockPackageService.Setup(s => s.Push(null))
 				.ReturnsAsync(new ResponseModel(HttpStatusCode.BadRequest));
 			// Act
-			var controller = new PackageController(mockPackageService.Object);
+			var controller = new PackageController(_mockPackageService.Object);
 			var result = await controller.Push(null);
 
 			// Assert
@@ -63,13 +69,12 @@ namespace LocalNugetFeed.Web.Tests
 		public async Task Search_ReturnsPackagesFilteredByVersionDesc_WhenQueryIsEmpty()
 		{
 			// setup
-			var mockPackageService = new Mock<IPackageService>();
 			var lastVersionPackage = TwoTestPackageVersions.OrderByDescending(x => new NuGetVersion(x.Version)).Last();
-			mockPackageService.Setup(s => s.Search(null))
+			_mockPackageService.Setup(s => s.Search(null))
 				.ReturnsAsync(new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, new[] {lastVersionPackage}));
 
 			// Act
-			var controller = new PackageController(mockPackageService.Object);
+			var controller = new PackageController(_mockPackageService.Object);
 			var result = await controller.Search();
 
 			// Assert
@@ -86,12 +91,11 @@ namespace LocalNugetFeed.Web.Tests
 		public async Task Search_ReturnsBadRequestResult()
 		{
 			// setup
-			var mockPackageService = new Mock<IPackageService>();
-			mockPackageService.Setup(s => s.Search(null))
+			_mockPackageService.Setup(s => s.Search(null))
 				.ReturnsAsync(new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.BadRequest));
 
 			// Act
-			var controller = new PackageController(mockPackageService.Object);
+			var controller = new PackageController(_mockPackageService.Object);
 			var result = await controller.Search();
 
 			// Assert
@@ -109,12 +113,11 @@ namespace LocalNugetFeed.Web.Tests
 			var searchResult = new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK,
 				new[] {TwoTestPackageVersions.OrderByDescending(x => new NuGetVersion(x.Version)).Last()});
 
-			var mockPackageService = new Mock<IPackageService>();
-			mockPackageService.Setup(s => s.Search(query))
+			_mockPackageService.Setup(s => s.Search(query))
 				.ReturnsAsync(() => isExist ? searchResult : new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NotFound));
 
 			// Act
-			var controller = new PackageController(mockPackageService.Object);
+			var controller = new PackageController(_mockPackageService.Object);
 			var result = await controller.Search(query);
 
 			// Assert
@@ -138,12 +141,11 @@ namespace LocalNugetFeed.Web.Tests
 		public async Task Search_ReturnsNotFound_WhenNoPackages()
 		{
 			// setup
-			var mockPackageService = new Mock<IPackageService>();
-			mockPackageService.Setup(s => s.Search(null))
+			_mockPackageService.Setup(s => s.Search(null))
 				.ReturnsAsync(new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NotFound));
 
 			// Act
-			var controller = new PackageController(mockPackageService.Object);
+			var controller = new PackageController(_mockPackageService.Object);
 			var result = await controller.Search();
 
 			// Assert
@@ -156,12 +158,10 @@ namespace LocalNugetFeed.Web.Tests
 		public async Task PackageVersions_ReturnsContentOrNotFound(string packageId, bool packageExists)
 		{
 			// setup
-			var mockPackageService = new Mock<IPackageService>();
-
-			mockPackageService.Setup(s => s.GetPackages())
+			_mockPackageService.Setup(s => s.GetPackages())
 				.ReturnsAsync(() => new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, TwoTestPackageVersions));
 
-			mockPackageService.Setup(s => s.PackageVersions(packageId))
+			_mockPackageService.Setup(s => s.PackageVersions(packageId))
 				.ReturnsAsync(() =>
 				{
 					var searchResult = new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, TwoTestPackageVersions);
@@ -169,7 +169,7 @@ namespace LocalNugetFeed.Web.Tests
 				});
 
 			// Act
-			var controller = new PackageController(mockPackageService.Object);
+			var controller = new PackageController(_mockPackageService.Object);
 			var result = await controller.PackageVersions(packageId);
 
 			// Assert
@@ -191,19 +191,18 @@ namespace LocalNugetFeed.Web.Tests
 		public async Task PackageVersions_ReturnsBadRequestResult_WhenPackageIdIsUndefined()
 		{
 			// setup
-			var mockPackageService = new Mock<IPackageService>();
-			mockPackageService.Setup(s => s.PackageVersions(null))
+			_mockPackageService.Setup(s => s.PackageVersions(null))
 				.ReturnsAsync(new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.BadRequest));
 
 			// Act
-			var controller = new PackageController(mockPackageService.Object);
+			var controller = new PackageController(_mockPackageService.Object);
 			var result = await controller.PackageVersions(null);
 
 			// Assert
 			Assert.IsType<BadRequestObjectResult>(result.Result);
 		}
 
-		#region unit tests with routing
+		#region integration & unit tests using testserver host
 
 		[Theory]
 		[InlineData(null, HttpStatusCode.OK)]
@@ -212,17 +211,16 @@ namespace LocalNugetFeed.Web.Tests
 		public async Task Search_GetHttpRequest_ReturnsResponseAccordingWithRequest(string query, HttpStatusCode statusCode)
 		{
 			// setup
-			var mockPackageService = new Mock<IPackageService>();
 			var searchResult = TwoTestPackageVersions.Where(x => string.IsNullOrWhiteSpace(query) || x.Id.Contains(query, StringComparison.OrdinalIgnoreCase))
 				.OrderByDescending(s => new NuGetVersion(s.Version))
 				.GroupBy(g => g.Id)
 				.Select(z => z.First()).ToList();
-			mockPackageService.Setup(s => s.Search(query))
+			_mockPackageService.Setup(s => s.Search(query))
 				.ReturnsAsync(new ResponseModel<IReadOnlyList<Package>>(statusCode, searchResult));
 			// Act
 			TestServer server = new TestServer(new WebHostBuilder()
 				.UseStartup<Startup>()
-				.ConfigureTestServices(services => { services.AddSingleton(mockPackageService.Object); }));
+				.ConfigureTestServices(services => { services.AddSingleton(_mockPackageService.Object); }));
 
 			var client = server.CreateClient();
 
@@ -255,15 +253,14 @@ namespace LocalNugetFeed.Web.Tests
 		{
 			var _mockFile = GetMockFile();
 			// setup
-			var mockPackageService = new Mock<IPackageService>();
-			mockPackageService.Setup(s => s.Push(It.IsAny<IFormFile>()))
+			_mockPackageService.Setup(s => s.Push(It.IsAny<IFormFile>()))
 				.ReturnsAsync(new ResponseModel(HttpStatusCode.OK));
 
 			// Act
 
 			TestServer server = new TestServer(new WebHostBuilder()
 				.UseStartup<Startup>()
-				.ConfigureTestServices(services => { services.AddSingleton(mockPackageService.Object); }));
+				.ConfigureTestServices(services => { services.AddSingleton(_mockPackageService.Object); }));
 
 			var client = server.CreateClient();
 
@@ -288,15 +285,14 @@ namespace LocalNugetFeed.Web.Tests
 		public async Task Push_PutHttpRequest_AddNullableFileToLocalFeed_ReturnsBadRequestResponse()
 		{
 			// setup
-			var mockPackageService = new Mock<IPackageService>();
-			mockPackageService.Setup(s => s.Push(null))
+			_mockPackageService.Setup(s => s.Push(null))
 				.ReturnsAsync(new ResponseModel(HttpStatusCode.BadRequest));
 
 			// Act
 
 			TestServer server = new TestServer(new WebHostBuilder()
 				.UseStartup<Startup>()
-				.ConfigureTestServices(services => { services.AddSingleton(mockPackageService.Object); }));
+				.ConfigureTestServices(services => { services.AddSingleton(_mockPackageService.Object); }));
 
 			var client = server.CreateClient();
 
@@ -312,23 +308,22 @@ namespace LocalNugetFeed.Web.Tests
 		public async Task PackageVersions_GetHttpRequest_ReturnsResponseAccordingWithRequest(string packageId, HttpStatusCode statusCode)
 		{
 			// setup
-			var mockPackageService = new Mock<IPackageService>();
-			mockPackageService.Setup(s => s.PackageVersions(packageId))
+			_mockPackageService.Setup(s => s.PackageVersions(packageId))
 				.ReturnsAsync(new ResponseModel<IReadOnlyList<Package>>(statusCode,
 					TwoTestPackageVersions.Where(x => x.Id.Contains(packageId)).ToList()));
 
 			// Act
 			TestServer server = new TestServer(new WebHostBuilder()
 				.UseStartup<Startup>()
-				.ConfigureTestServices(services => { services.AddSingleton(mockPackageService.Object); }));
+				.ConfigureTestServices(services => { services.AddSingleton(_mockPackageService.Object); }));
 
 			var client = server.CreateClient();
 			var response = await client.GetAsync($"package/{packageId}");
 			var content = await response.Content.ReadAsStringAsync();
 			var packages = JsonConvert.DeserializeObject<IReadOnlyList<Package>>(content);
-			
+
 			// Assert
-			
+
 			Assert.Equal(statusCode, response.StatusCode);
 			if (statusCode == HttpStatusCode.OK)
 			{
@@ -342,6 +337,42 @@ namespace LocalNugetFeed.Web.Tests
 		}
 
 		#endregion
+
+		/// <summary>
+		/// integration testing of <see cref="PackageSessionService"/>, but by mocking of <see cref="PackageFileStorageService"/>
+		/// </summary>
+		/// <returns></returns>
+		[Fact]
+		public async Task Search_ReturnsPackagesFromSession()
+		{
+			// setup
+			var searchResult = TwoTestPackageVersions
+				.OrderByDescending(s => new NuGetVersion(s.Version))
+				.GroupBy(g => g.Id)
+				.Select(z => z.First()).ToList();
+			var mockPackageFileStorageService = new Mock<IPackageFileStorageService>();
+			mockPackageFileStorageService.Setup(s => s.Read()).Returns(() => new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, searchResult));
+
+			// Act
+			TestServer server = new TestServer(new WebHostBuilder()
+				.UseStartup<Startup>()
+				.ConfigureTestServices(services =>
+				{
+					services.AddSingleton(mockPackageFileStorageService.Object);
+					services.AddHttpContextAccessor();
+				}));
+
+			var client = server.CreateClient();
+
+			var response = await client.GetAsync("");
+
+			//Assert
+
+			var content = await response.Content.ReadAsStringAsync();
+			var packages = JsonConvert.DeserializeObject<IReadOnlyList<Package>>(content);
+			Assert.True(packages.Any());
+			Assert.NotNull(packages.Single());
+		}
 
 		/// <summary>
 		/// Setup mock file using a memory stream

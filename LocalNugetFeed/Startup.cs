@@ -58,11 +58,14 @@ namespace LocalNugetFeed
 					.GetService<IOptionsSnapshot<PackagesFileStorageOptions>>()
 					.Value;
 
-				options.Path = string.IsNullOrEmpty(options.Path)
-					? Path.Combine(Directory.GetCurrentDirectory(), Constants.DefaultPackagesDirectory)
-					: options.Path;
-
-				Directory.CreateDirectory(options.Path);
+				try
+				{
+					options.Path = PackagesFileHelper.GetPackagesFolderPath(options.Path);
+				}
+				catch (Exception)
+				{
+					options.Path = PackagesFileHelper.GetDefaultPackagesFolderFullPath();
+				}
 
 				return options;
 			});
