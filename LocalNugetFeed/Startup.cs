@@ -8,6 +8,7 @@ using LocalNugetFeed.Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SpaServices.AngularCli;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -36,7 +37,10 @@ namespace LocalNugetFeed
 			});
 			
 			services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
-			
+			services.AddSpaStaticFiles(c =>
+			{
+				c.RootPath = "ClientApp/dist";
+			});
 			services.AddTransient<IPackageFileStorageService, PackageFileStorageService>();
 			services.AddTransient<IPackageService, PackageService>();
 			services.AddSingleton<IPackageSessionService, PackageSessionService>();
@@ -87,6 +91,7 @@ namespace LocalNugetFeed
 			
 			app.UseSession();
 			app.UseStaticFiles();
+			app.UseSpaStaticFiles();
 			app.UseStatusCodePages();
 			app.UseHttpsRedirection();
 			app.UseMvc(routes =>
@@ -100,7 +105,16 @@ namespace LocalNugetFeed
 					Constants.NuGetPushRelativeUrl,
 					defaults: new { controller = "Package", action = nameof(PackageController.Push) });
 			});
-
+			app.UseSpa(spa =>
+			{
+				// refs https://docs.microsoft.com/en-us/aspnet/core/client-side/spa/angular?view=aspnetcore-2.1
+				spa.Options.SourcePath = "ClientApp";
+ 
+				if (env.IsDevelopment())
+				{
+					spa.UseAngularCliServer(npmScript: "start");
+				}
+			});
 		}
 	}
 }
