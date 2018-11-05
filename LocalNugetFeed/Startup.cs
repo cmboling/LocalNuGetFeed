@@ -37,9 +37,10 @@ namespace LocalNugetFeed
 			});
 			
 			services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+			
 			services.AddSpaStaticFiles(c =>
 			{
-				c.RootPath = "ClientApp/dist";
+				c.RootPath = "wwwroot";
 			});
 			services.AddTransient<IPackageFileStorageService, PackageFileStorageService>();
 			services.AddTransient<IPackageService, PackageService>();
@@ -85,17 +86,19 @@ namespace LocalNugetFeed
 			else
 			{
 				app.UseHsts();
+				app.UseHttpsRedirection();
 			}
 			
 			// todo: register api key for nuget push operation
 			
 			app.UseSession();
+			app.UseDefaultFiles();
 			app.UseStaticFiles();
 			app.UseSpaStaticFiles();
 			app.UseStatusCodePages();
-			app.UseHttpsRedirection();
 			app.UseMvc(routes =>
 			{
+				
 				// Service index
 				routes.MapRoute("index", "v3/index.json", defaults: new { controller = "Index", action = nameof(IndexController.Get)});
 
@@ -105,6 +108,7 @@ namespace LocalNugetFeed
 					Constants.NuGetPushRelativeUrl,
 					defaults: new { controller = "Package", action = nameof(PackageController.Push) });
 			});
+
 			app.UseSpa(spa =>
 			{
 				// refs https://docs.microsoft.com/en-us/aspnet/core/client-side/spa/angular?view=aspnetcore-2.1

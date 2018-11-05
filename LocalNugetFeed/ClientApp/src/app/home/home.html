@@ -1,9 +1,27 @@
 <div class="container">
   <div class="row">
-    <nav class="navbar">
-      <div class="col-md-6">
-        <!-- TODO -->
+      <div class="col-md-12 col-sm-12">
+        <input placeholder="Search packages" [(ngModel)]="query" type="text" class="form-control" id="search" #searchRef>
       </div>
-    </nav>
+  </div>
+  <!-- TODO: info with push url -->
+
+  <div class="row">
+    <p style="font-size: 18px;text-align: center" *ngIf="loading">Please wait...</p>
+    <div class="col-md-12" >
+      <div class="thumbnail packages-list" *ngFor="let package of packages">
+        <div class="row">
+          <div class="col-sm-12">
+            <a [routerLink]="['/package', package.id]">
+              <h4>
+                {{package.id}}
+              </h4>
+            </a>
+            <h4><span class="badge badge-secondary">Version: {{package.version}}</span></h4>
+            <h4><span *ngIf="package.authors" class="badge badge-secondary">Authors: {{package.authors}}</span></h4>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>

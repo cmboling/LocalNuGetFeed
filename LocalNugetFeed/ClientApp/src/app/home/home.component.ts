@@ -5,11 +5,13 @@ import {ActivatedRoute, Router} from "@angular/router";
 
 @Component({
   selector: 'home',
-  templateUrl: './home.html'
+  templateUrl: './home.html',
+  styleUrls: ['./home.component.css']
 })
 
 export class HomeComponent {
   public packages: Package[] = [];
+  public loading = false;
   query = '';
 
   constructor(private _packageService: PackageService, private router: Router, private activeRoute: ActivatedRoute) {
@@ -28,23 +30,15 @@ export class HomeComponent {
 
 
   search(query?: string) {
-    //this.loading = true;
+    this.loading = true;
 
     this._packageService.search(query).subscribe((result: Package[]) => {
-
         this.packages = result || [];
-        // if (this.query && this.query.length > 0) {
-        //   this.router.navigate(['/'], { queryParams: { q: query } });
-        // } else {
-        //   this.router.navigate(['/']);
-        //
-        // }
       }, (error) => {
         this.packages.length = 0;
         console.log(error);
       }, () => {
-        //this.loading = false;
-        //this.setNoResultsFlag();
+        this.loading = false;
       }
     );
   }

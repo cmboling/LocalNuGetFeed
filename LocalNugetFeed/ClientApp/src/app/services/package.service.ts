@@ -7,10 +7,8 @@ import {APP_BASE_HREF} from '@angular/common';
 
 @Injectable({providedIn: 'root'})
 export class PackageService {
-  private baseApiUrl: string;
 
-  constructor(private http: HttpClient) {
-    this.baseApiUrl = '';
+  constructor(private http: HttpClient, @Inject(APP_BASE_HREF) private baseHref: string) {
   }
 
   search(query?: any) {
@@ -20,7 +18,7 @@ export class PackageService {
         fromString: `q=${query}`
       });
     }
-    return this.http.get<Package[]>(this.baseApiUrl, { params: params })
+    return this.http.get<Package[]>(`${this.baseHref}packages`, {params: params})
       .pipe(catchError(PackageService.errorHandler));
 
   }

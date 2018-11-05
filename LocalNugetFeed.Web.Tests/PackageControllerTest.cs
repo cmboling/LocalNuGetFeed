@@ -107,7 +107,7 @@ namespace LocalNugetFeed.Web.Tests
 		[InlineData("", true)]
 		[InlineData("TestPackage", true)]
 		[InlineData("UnknownPackage", false)]
-		public async Task Search_ReturnsContentOrNot_WhenQueryIsExists(string query, bool isExist)
+		public async Task Search_ReturnsResponseAccordingWithInlineData(string query, bool isExist)
 		{
 			// setup
 			var searchResult = new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK,
@@ -155,7 +155,7 @@ namespace LocalNugetFeed.Web.Tests
 		[Theory]
 		[InlineData("MyTestPackage", true)]
 		[InlineData("UnknownPackage", false)]
-		public async Task PackageVersions_ReturnsContentOrNotFound(string packageId, bool packageExists)
+		public async Task PackageVersions_ReturnsResponseAccordingWithInlineData(string packageId, bool packageExists)
 		{
 			// setup
 			_mockPackageService.Setup(s => s.GetPackages())
@@ -208,7 +208,7 @@ namespace LocalNugetFeed.Web.Tests
 		[InlineData(null, HttpStatusCode.OK)]
 		[InlineData("test", HttpStatusCode.OK)]
 		[InlineData("Unknown", HttpStatusCode.NotFound)]
-		public async Task Search_GetHttpRequest_ReturnsResponseAccordingWithRequest(string query, HttpStatusCode statusCode)
+		public async Task Search_GetByRouteTemplate_ReturnsResponseAccordingWithInlineData(string query, HttpStatusCode statusCode)
 		{
 			// setup
 			var searchResult = TwoTestPackageVersions.Where(x => string.IsNullOrWhiteSpace(query) || x.Id.Contains(query, StringComparison.OrdinalIgnoreCase))
@@ -224,7 +224,7 @@ namespace LocalNugetFeed.Web.Tests
 
 			var client = server.CreateClient();
 
-			var response = await client.GetAsync(!string.IsNullOrWhiteSpace(query) ? $"?q={query}" : "");
+			var response = await client.GetAsync(!string.IsNullOrWhiteSpace(query) ? $"packages?q={query}" : "packages");
 			//Assert
 
 			Assert.Equal(statusCode, response.StatusCode);
@@ -249,7 +249,7 @@ namespace LocalNugetFeed.Web.Tests
 		}
 
 		[Fact]
-		public async Task Push_PutHttpRequest_AddPackageToLocalFeed_ReturnsSuccessfulResponse()
+		public async Task Push_PutByRouteTemplate_ReturnsSuccessfulResponse()
 		{
 			var _mockFile = GetMockFile();
 			// setup
@@ -282,7 +282,7 @@ namespace LocalNugetFeed.Web.Tests
 		}
 
 		[Fact]
-		public async Task Push_PutHttpRequest_AddNullableFileToLocalFeed_ReturnsBadRequestResponse()
+		public async Task Push_PutByRouteTemplate_AddNullableFileToLocalFeed_ReturnsBadRequestResponse()
 		{
 			// setup
 			_mockPackageService.Setup(s => s.Push(null))
@@ -305,7 +305,7 @@ namespace LocalNugetFeed.Web.Tests
 		[Theory]
 		[InlineData("MyTestPackage", HttpStatusCode.OK)]
 		[InlineData("Unknown", HttpStatusCode.NotFound)]
-		public async Task PackageVersions_GetHttpRequest_ReturnsResponseAccordingWithRequest(string packageId, HttpStatusCode statusCode)
+		public async Task PackageVersions_GetByRouteTemplate_ReturnsResponseAccordingWithInlineData(string packageId, HttpStatusCode statusCode)
 		{
 			// setup
 			_mockPackageService.Setup(s => s.PackageVersions(packageId))
@@ -343,7 +343,7 @@ namespace LocalNugetFeed.Web.Tests
 		/// </summary>
 		/// <returns></returns>
 		[Fact]
-		public async Task Search_ReturnsPackagesFromSession()
+		public async Task Search_GetByRouteTemplate_ReturnsPackagesFromSession()
 		{
 			// setup
 			var searchResult = TwoTestPackageVersions
@@ -364,7 +364,7 @@ namespace LocalNugetFeed.Web.Tests
 
 			var client = server.CreateClient();
 
-			var response = await client.GetAsync("");
+			var response = await client.GetAsync("packages");
 
 			//Assert
 
