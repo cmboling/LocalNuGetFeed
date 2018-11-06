@@ -1,27 +1,25 @@
 <div class="container">
   <div class="row">
-      <div class="col-md-12 col-sm-12">
-        <input placeholder="Search packages" [(ngModel)]="query" type="text" class="form-control" id="search" #searchRef>
-      </div>
+    <div class="col-md-12 col-sm-12">
+      <input placeholder="Search packages" [(ngModel)]="query" type="text" class="form-control" id="search" #searchRef>
+    </div>
   </div>
   <!-- TODO: info with push url -->
 
   <p class="busy-indicator text-center" *ngIf="loading">Please wait...</p>
 
-  <div class="row">
+  <div class="row packages-list">
     <div class="col-md-12">
-      <div class="thumbnail packages-list" *ngFor="let package of packages" [hidden]="noResults">
-        <div class="row">
-          <div class="col-sm-12">
-            <a [routerLink]="['/package', package.id]">
-              <h4>
-                {{package.id}}
-              </h4>
-            </a>
-            <h5><span class="badge badge-secondary">Version: {{package.version}}</span></h5>
-          </div>
-        </div>
-      </div>
+      <ul class="list-group" [hidden]="noResults">
+        <li class="list-group-item" *ngFor="let package of packages">
+          <a [routerLink]="['/package', package.id]">
+            <h4>
+              {{package.id}}
+            </h4>
+          </a>
+          <h5><span class="badge badge-secondary">Version: {{package.version}}</span></h5>
+        </li>
+      </ul>
     </div>
   </div>
 

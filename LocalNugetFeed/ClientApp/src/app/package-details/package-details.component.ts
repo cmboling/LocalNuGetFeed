@@ -9,7 +9,7 @@ import {PackageService} from "../services/package.service";
   templateUrl: './package-details.html'
 })
 export class PackageDetailsComponent {
-  public packageVersions: string[];
+  public packageVersions: Package[];
   public package: Package;
 
   constructor(private _packageService: PackageService, private route: ActivatedRoute) {
@@ -22,7 +22,7 @@ export class PackageDetailsComponent {
       .subscribe(params => {
         if (params.id) {
           this.getPackageVersions(params.id);
-        }else{
+        } else {
           console.error('Package Id is undefined');
         }
       }, error => {
@@ -31,11 +31,15 @@ export class PackageDetailsComponent {
 
   }
 
+  getPackageInfoByVersion(selectedPackage: Package) {
+    this.package = this.packageVersions.filter(x => x.version === selectedPackage.version)[0];
+  }
+
   getPackageVersions(packageId: string) {
     this._packageService.getPackageVersions(packageId).subscribe(
       data => {
-        this.packageVersions = data.map(z => z.version);
-        this.package = data[0]; // actual package with latest version
+        this.packageVersions = data;
+        this.getPackageInfoByVersion(data[0]); // actual package with latest version
       }, error => {
         console.error(error);
       }
