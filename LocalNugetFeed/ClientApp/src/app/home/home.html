@@ -6,10 +6,11 @@
   </div>
   <!-- TODO: info with push url -->
 
+  <p class="busy-indicator text-center" *ngIf="loading">Please wait...</p>
+
   <div class="row">
-    <p style="font-size: 18px;text-align: center" *ngIf="loading">Please wait...</p>
-    <div class="col-md-12" >
-      <div class="thumbnail packages-list" *ngFor="let package of packages">
+    <div class="col-md-12">
+      <div class="thumbnail packages-list" *ngFor="let package of packages" [hidden]="noResults">
         <div class="row">
           <div class="col-sm-12">
             <a [routerLink]="['/package', package.id]">
@@ -17,11 +18,14 @@
                 {{package.id}}
               </h4>
             </a>
-            <h4><span class="badge badge-secondary">Version: {{package.version}}</span></h4>
-            <h4><span *ngIf="package.authors" class="badge badge-secondary">Authors: {{package.authors}}</span></h4>
+            <h5><span class="badge badge-secondary">Version: {{package.version}}</span></h5>
           </div>
         </div>
       </div>
     </div>
+  </div>
+
+  <div class="row" *ngIf="noResults && !loading">
+    <h4 class="no-results"><span class="badge badge-warning">No results found...</span></h4>
   </div>
 </div>
