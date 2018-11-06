@@ -224,7 +224,7 @@ namespace LocalNugetFeed.Web.Tests
 
 			var client = server.CreateClient();
 
-			var response = await client.GetAsync(!string.IsNullOrWhiteSpace(query) ? $"packages?q={query}" : "packages");
+			var response = await client.GetAsync(!string.IsNullOrWhiteSpace(query) ? $"api/packages?q={query}" : "api/packages");
 			//Assert
 
 			Assert.Equal(statusCode, response.StatusCode);
@@ -318,7 +318,7 @@ namespace LocalNugetFeed.Web.Tests
 				.ConfigureTestServices(services => { services.AddSingleton(_mockPackageService.Object); }));
 
 			var client = server.CreateClient();
-			var response = await client.GetAsync($"package/{packageId}");
+			var response = await client.GetAsync($"api/package/{packageId}");
 			var content = await response.Content.ReadAsStringAsync();
 			var packages = JsonConvert.DeserializeObject<IReadOnlyList<Package>>(content);
 
@@ -364,7 +364,7 @@ namespace LocalNugetFeed.Web.Tests
 
 			var client = server.CreateClient();
 
-			var response = await client.GetAsync("packages");
+			var response = await client.GetAsync("api/packages");
 
 			//Assert
 

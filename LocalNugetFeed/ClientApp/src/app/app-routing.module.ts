@@ -1,21 +1,22 @@
-import { NgModule } from '@angular/core';
-import { Routes, RouterModule } from '@angular/router';
-import { HomeComponent } from "./home/home.component";
-import {APP_BASE_HREF} from "@angular/common";
+import {NgModule} from '@angular/core';
+import {Routes, RouterModule} from '@angular/router';
+import {HomeComponent} from "./home/home.component";
+import {PackageDetailsComponent} from "./package-details/package-details.component";
 
 
 const routes: Routes = [
 
-  { path: '', redirectTo: '/home', pathMatch: 'full' },
-  { path: 'home', component: HomeComponent, runGuardsAndResolvers: 'paramsOrQueryParamsChange' },
-  { path: '**', redirectTo: '/home' }
+  {path: '', redirectTo: 'packages', pathMatch: 'full'},
+  {path: 'packages', component: HomeComponent, runGuardsAndResolvers: 'paramsOrQueryParamsChange'},
+  {path: 'package/:id', component: PackageDetailsComponent},
+  {path: '**', redirectTo: 'packages'}
 
 ];
 
-
 @NgModule({
-  imports: [RouterModule.forRoot(routes, { enableTracing: true, initialNavigation: 'enabled'  })],
+  imports: [RouterModule.forRoot(routes)],
   exports: [RouterModule],
-  providers: [{provide: APP_BASE_HREF, useValue: '/'}],
+  providers: [],
 })
-export class AppRoutingModule { }
+export class AppRoutingModule {
+}

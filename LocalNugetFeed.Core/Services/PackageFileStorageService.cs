@@ -34,7 +34,7 @@ namespace LocalNugetFeed.Core.Services
 
 			Directory.CreateDirectory(packageFolderPath);
 
-			using (var destinationFileStream = File.Open($"{fullPackagePath}.nupkg", FileMode.CreateNew)) 
+			using (var destinationFileStream = File.Open($"{fullPackagePath}.nupkg", FileMode.CreateNew))
 			{
 				packageFileStream.Seek(0, SeekOrigin.Begin);
 
@@ -87,7 +87,7 @@ namespace LocalNugetFeed.Core.Services
 					}
 				}
 			}
-			
+
 			return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, result);
 		}
 
@@ -99,6 +99,15 @@ namespace LocalNugetFeed.Core.Services
 				Version = packageNuspec.PackageVersion(),
 				Description = packageNuspec.GetDescription(),
 				Authors = packageNuspec.GetAuthors(),
+				PackageDependencies = packageNuspec.GetDependencyGroups().Select(x => new PackageDependencies()
+				{
+					TargetFramework = x.TargetFramework?.DotNetFrameworkName,
+					Dependencies = x.Packages.Select(z => new PackageDependency()
+					{
+						Id = z.Id,
+						Version = z.VersionRange.ToNormalizedString()
+					}).ToList()
+				}).ToList()
 			};
 		}
 	}

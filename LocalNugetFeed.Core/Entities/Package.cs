@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace LocalNugetFeed.Core.Entities
 {
 	/// <summary>
@@ -12,5 +14,7 @@ namespace LocalNugetFeed.Core.Entities
 		public string Description { get; set; }
 
 		public string Authors { get; set; }
+
+		public IReadOnlyList<PackageDependencies> PackageDependencies { get; set; }
 	}
 }

@@ -3,12 +3,11 @@ import {HttpClient, HttpErrorResponse, HttpParams} from "@angular/common/http";
 import {throwError} from "rxjs";
 import {catchError} from "rxjs/operators";
 import {Package} from "../shared/models/package.model";
-import {APP_BASE_HREF} from '@angular/common';
 
 @Injectable({providedIn: 'root'})
 export class PackageService {
 
-  constructor(private http: HttpClient, @Inject(APP_BASE_HREF) private baseHref: string) {
+  constructor(private http: HttpClient, @Inject('BASE_URL') private baseHref: string) {
   }
 
   search(query?: any) {
@@ -18,9 +17,14 @@ export class PackageService {
         fromString: `q=${query}`
       });
     }
-    return this.http.get<Package[]>(`${this.baseHref}packages`, {params: params})
+    return this.http.get<Package[]>(`${this.baseHref}api/packages`, {params: params})
       .pipe(catchError(PackageService.errorHandler));
 
+  }
+
+  getPackageVersions(packageId: string){
+    return this.http.get<Package[]>(`${this.baseHref}api/package/${packageId}`)
+      .pipe(catchError(PackageService.errorHandler));
   }
 
   private static errorHandler(err: HttpErrorResponse) {

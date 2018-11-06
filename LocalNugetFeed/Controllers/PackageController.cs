@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using LocalNugetFeed.Core.Entities;
 using LocalNugetFeed.Core.Interfaces;
 using LocalNugetFeed.Core.Models;
-using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -52,7 +51,8 @@ namespace LocalNugetFeed.Controllers
 		/// </summary>
 		/// <param name="query">search query (optional)</param>
 		/// <returns></returns>
-		[Route("packages/{q?}")]
+		[HttpGet]
+		[Route("api/packages/{q?}")]
 		[ProducesResponseType(404, Type = typeof(NotFoundObjectResult))]
 		[ProducesResponseType(400, Type = typeof(BadRequestObjectResult))]
 		public async Task<ActionResult<IReadOnlyList<Package>>> Search([FromQuery(Name = "q")] string query = null)
@@ -75,7 +75,8 @@ namespace LocalNugetFeed.Controllers
 		/// </summary>
 		/// <param name="id">Package id</param>
 		/// <returns></returns>
-		[Route("package/{id}")]
+		[HttpGet]
+		[Route("api/package/{id}")]
 		[ProducesResponseType(404, Type = typeof(NotFoundObjectResult))]
 		[ProducesResponseType(400, Type = typeof(BadRequestObjectResult))]
 		public async Task<ActionResult<IReadOnlyList<Package>>> PackageVersions([BindRequired, FromRoute] string id)

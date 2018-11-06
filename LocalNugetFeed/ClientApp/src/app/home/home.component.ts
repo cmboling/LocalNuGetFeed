@@ -13,9 +13,9 @@ import {fromEvent} from "rxjs";
 
 export class HomeComponent {
   public packages: Package[] = [];
-  private loading = false;
-  private query = '';
-  private noResults: boolean;
+  public loading = false;
+  public query = '';
+  public noResults: boolean;
 
   constructor(private _packageService: PackageService, private router: Router, private activeRoute: ActivatedRoute) {
   }
@@ -52,7 +52,7 @@ export class HomeComponent {
         this.packages = result || [];
       }, (error) => {
         this.packages.length = 0;
-        console.log(error);
+        console.error(error);
       }
     );
   }
