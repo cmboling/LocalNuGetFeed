@@ -85,8 +85,9 @@ namespace LocalNugetFeed
 			}
 			else
 			{
-				app.UseHsts();
-				app.UseHttpsRedirection();
+				// can be used when host will be secured and approved by certificate i.e. in production, not for local usage
+				//app.UseHsts();
+				//app.UseHttpsRedirection();
 			}
 			
 			// todo: register api key for nuget push operation
