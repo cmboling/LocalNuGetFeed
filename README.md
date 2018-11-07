@@ -12,7 +12,9 @@ Private NuGet feed to store your packages
 6. Start the service by `dotnet run` command
 7. Open the URL http://localhost:5000/ in your browser
 
-* If you're running a service on macOS and you don't have globally installed `angular/cli` package, then you should run the next command:
+*NOTES:*
+
+4* If you're running a service on macOS and you don't have globally installed `angular/cli` package, then you should run the next command:
 
 `$ alias ng="./localnugetfeed/localnugetfeed/clientapp/node_modules/@angular/cli/bin/ng"`
 
