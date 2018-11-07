@@ -9,7 +9,7 @@
   <p class="busy-indicator text-center" *ngIf="loading">Please wait...</p>
 
   <div class="row packages-list">
-    <div class="col-md-12">
+    <div class="col-md-12 col-sm-12">
       <ul class="list-group" [hidden]="noResults">
         <li class="list-group-item" *ngFor="let package of packages">
           <a [routerLink]="['/package', package.id]">
@@ -23,7 +23,7 @@
     </div>
   </div>
 
-  <div class="row" *ngIf="noResults && !loading">
-    <h4 class="no-results"><span class="badge badge-warning">No results found...</span></h4>
+  <div class="alert alert-primary" role="alert" *ngIf="noResults && !loading">
+    No packages found...
   </div>
 </div>

@@ -47,7 +47,7 @@ export class HomeComponent {
     this._packageService.search(query).pipe(
       finalize(() => {
         this.loading = false;
-        this.noResults = this.packages.length === 0;
+        this.noResults = this.packages.length === 0 && this.query.length > 0;
       })).subscribe((result: Package[]) => {
         this.packages = result || [];
       }, (error) => {
