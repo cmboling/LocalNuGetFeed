@@ -7,7 +7,7 @@ Private NuGet feed to store your packages
 1. Clone a current repository `https://github.com/beylkhanovdamir/LocalNuGetFeed.git`
 2. Navigate to `.\LocalNuGetFeed\LocalNugetFeed\ClientApp`
 3. Run the `npm install` command
-4. Run the `ng build --prod --aot` command. See notes below if you're using macOS 
+4. Run the `ng build --prod --aot` command. *See notes below if you're using macOS before running `ng build` command*
 5. Move up on one level up to `.\LocalNuGetFeed\LocalNugetFeed\`
 6. Start the service by `dotnet run` command
 7. Open the URL http://localhost:5000/ in your browser
