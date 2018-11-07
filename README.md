@@ -12,4 +12,6 @@ Private NuGet feed to store your packages
 
 Run the below command:
 
-`dotnet nuget push -s http://localhost:5000/v3/index.json {PackageFilePath}.nupkg` where *{PackageFilePath}* is the path to your NuGet package
+`dotnet nuget push -s http://localhost:5000/v3/index.json {PackageFilePath}.nupkg` 
+
+where *{PackageFilePath}* is the path to your NuGet package
