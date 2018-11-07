@@ -3,6 +3,7 @@ Private NuGet feed to store your packages
 
 ## Getting Started
 
+0. Install .NET Core (if you haven't it)
 1. Clone a current repository `https://github.com/beylkhanovdamir/LocalNuGetFeed.git`
 2. Navigate to `.\LocalNuGetFeed\LocalNugetFeed`
 3. Start the service by `dotnet run` command
