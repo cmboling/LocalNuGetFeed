@@ -4,12 +4,10 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using LocalNugetFeed.Core.Common;
 using LocalNugetFeed.Core.Entities;
 using LocalNugetFeed.Core.Interfaces;
 using LocalNugetFeed.Core.Models;
 using LocalNugetFeed.Core.Services;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Internal;
 using Moq;
 using NuGet.Packaging;
@@ -23,6 +21,9 @@ namespace LocalNuGetFeed.Core.Tests
 		private readonly Mock<IPackageFileStorageService> _mockPackageFileStorageService;
 		private readonly Mock<IPackageSessionService> _mockPackageSessionService;
 
+		private const string MyTestPackageId = "MyTestPackage";
+		private const string SomePackageDependencyId = "SomePackageDependency";
+		
 		private readonly PackageService _packageService;
 		private string _mockFilePath => TestPackageHelper.GetOSVersionPackageFilePath();
 
@@ -204,12 +205,12 @@ namespace LocalNuGetFeed.Core.Tests
 		}
 		
 		[Theory]
-		[InlineData("mytestpackage", "1.0.0", true)]
-		[InlineData("mytest", "1.0.0", false)]
-		[InlineData(MyTestPackageId, "1.0.0", true)]
-		[InlineData(MyTestPackageId, "2.0.0", false)]
-		[InlineData("UnknownPackage","1.0.0", false)]
-		public async Task GetPackage_ReturnsPackageOrNotFound(string packageId, string packageVersion, bool isExist)
+		[InlineData("mytestpackage", "1.0.0", false, true)]
+		[InlineData("mytest", "1.0.0", false, false)]
+		[InlineData(MyTestPackageId, "1.0.1", true, true)]
+		[InlineData(MyTestPackageId, "2.0.0", false, false)]
+		[InlineData("UnknownPackage","1.0.0", false, false)]
+		public async Task GetPackage_ReturnsPackageOrNotFound(string packageId, string packageVersion, bool hasDependencies, bool isExist)
 		{
 			// setup
 			_mockPackageSessionService.Setup(s => s.Get()).Returns(() => TwoTestPackageVersions);
@@ -222,6 +223,12 @@ namespace LocalNuGetFeed.Core.Tests
 			{
 				Assert.True(result.Success);
 				Assert.NotNull(result.Data);
+				if (hasDependencies)
+				{
+					Assert.NotNull(result.Data.PackageDependencies);
+					Assert.True(result.Data.PackageDependencies.Any());
+					Assert.Equal(SomePackageDependencyId, result.Data.PackageDependencies.First().Dependencies.First().Id);
+				}
 			}
 			else
 			{
@@ -307,14 +314,23 @@ namespace LocalNuGetFeed.Core.Tests
 				Id = MyTestPackageId,
 				Description = "Package description",
 				Authors = "D.B.",
-				Version = "1.0.1"
+				Version = "1.0.1",
+				PackageDependencies = new List<PackageDependencies>()
+				{
+					new PackageDependencies()
+					{
+						TargetFramework = ".Net Core v.2.1",
+						Dependencies = new List<PackageDependency>()
+						{
+							new PackageDependency()
+							{
+								Id = "SomePackageDependency",
+								Version = "1.1.1"
+							}
+						}
+					}
+				}
 			}
 		};
-
-		private const string MyTestPackageId = "MyTestPackage";
-
-	
-
-
 	}
 }
