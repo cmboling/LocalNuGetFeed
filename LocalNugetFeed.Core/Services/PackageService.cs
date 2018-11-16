@@ -161,7 +161,7 @@ namespace LocalNugetFeed.Core.Services
 			}
 
 			searchResult = searchResult.OrderByDescending(s => new NuGetVersion(s.Version))
-				.GroupBy(g => g.Id)
+				.GroupBy(g => g.Id, StringComparer.OrdinalIgnoreCase)
 				.Select(z => z.First()).ToList();
 
 			return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, searchResult);

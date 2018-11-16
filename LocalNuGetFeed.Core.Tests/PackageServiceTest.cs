@@ -23,7 +23,7 @@ namespace LocalNuGetFeed.Core.Tests
 
 		private const string MyTestPackageId = "MyTestPackage";
 		private const string SomePackageDependencyId = "SomePackageDependency";
-		
+
 		private readonly PackageService _packageService;
 		private string _mockFilePath => TestPackageHelper.GetOSVersionPackageFilePath();
 
@@ -121,15 +121,21 @@ namespace LocalNuGetFeed.Core.Tests
 		[Theory]
 		[InlineData("", true)]
 		[InlineData("TestPackage", true)]
+		[InlineData("testpackage", true)]
 		[InlineData("UnknownPackage", false)]
 		public async Task Search_ReturnsContentOrNot_WhenQueryIsExists(string query, bool isExist)
 		{
 			// setup
-			var searchResult = TwoTestPackageVersions.Where(x => string.IsNullOrWhiteSpace(query) || x.Id.Contains(query, StringComparison.OrdinalIgnoreCase))
-				.OrderByDescending(s => new NuGetVersion(s.Version))
-				.GroupBy(g => g.Id)
-				.Select(z => z.First()).ToList();
-			_mockPackageSessionService.Setup(s => s.Get()).Returns(() => TwoTestPackageVersions);
+			var testPackageWithNameInLowerCase = new Package()
+			{
+				Id = MyTestPackageId.ToLowerInvariant(),
+				Description = "Package description",
+				Authors = "D.B.",
+				Version = "1.1.1"
+			};
+			var allPackages = new List<Package>(TwoTestPackageVersions) {testPackageWithNameInLowerCase};
+
+			_mockPackageSessionService.Setup(s => s.Get()).Returns(() => allPackages);
 
 			// Act
 			var result = await _packageService.Search(query);
@@ -141,7 +147,7 @@ namespace LocalNuGetFeed.Core.Tests
 				Assert.NotNull(result.Data);
 				Assert.True(result.Data.Any());
 				Assert.True(result.Data.Count == 1); // we should get only the latest version of TestPackage package
-				Assert.True(result.Data.First().Version == searchResult.First().Version);
+				Assert.True(result.Data.First().Version == testPackageWithNameInLowerCase.Version);
 			}
 			else
 			{
@@ -203,13 +209,13 @@ namespace LocalNuGetFeed.Core.Tests
 			Assert.False(result.Success);
 			Assert.True(result.StatusCode == HttpStatusCode.NotFound);
 		}
-		
+
 		[Theory]
 		[InlineData("mytestpackage", "1.0.0", false, true)]
 		[InlineData("mytest", "1.0.0", false, false)]
 		[InlineData(MyTestPackageId, "1.0.1", true, true)]
 		[InlineData(MyTestPackageId, "2.0.0", false, false)]
-		[InlineData("UnknownPackage","1.0.0", false, false)]
+		[InlineData("UnknownPackage", "1.0.0", false, false)]
 		public async Task GetPackage_ReturnsPackageOrNotFound(string packageId, string packageVersion, bool hasDependencies, bool isExist)
 		{
 			// setup
@@ -235,7 +241,7 @@ namespace LocalNuGetFeed.Core.Tests
 				Assert.Equal(HttpStatusCode.NotFound, result.StatusCode);
 			}
 		}
-		
+
 		[Fact]
 		public async Task GetPackage_ReturnsNotFoundResult()
 		{
@@ -250,7 +256,7 @@ namespace LocalNuGetFeed.Core.Tests
 			Assert.False(result.Success);
 			Assert.True(result.StatusCode == HttpStatusCode.NotFound);
 		}
-		
+
 		[Fact]
 		public async Task GetPackages_ReturnsDataFromSession()
 		{
@@ -265,13 +271,14 @@ namespace LocalNuGetFeed.Core.Tests
 			Assert.True(result.Data.Any());
 			Assert.True(result.Data.Count == 2);
 		}
-		
+
 		[Fact]
 		public async Task GetPackages_ReturnsDataFromFileSystem()
 		{
 			// setup
 			_mockPackageSessionService.Setup(s => s.Get()).Returns(() => null);
-			_mockPackageFileStorageService.Setup(s => s.Read()).Returns(() => new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, TwoTestPackageVersions));
+			_mockPackageFileStorageService.Setup(s => s.Read())
+				.Returns(() => new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, TwoTestPackageVersions));
 
 			// Act
 			var result = await _packageService.GetPackages();
@@ -281,7 +288,7 @@ namespace LocalNuGetFeed.Core.Tests
 			Assert.True(result.Data.Any());
 			Assert.True(result.Data.Count == 2);
 		}
-		
+
 		[Fact]
 		public async Task GetPackages_ReturnsBadRequestWhenNoAnyPackages()
 		{
@@ -297,7 +304,6 @@ namespace LocalNuGetFeed.Core.Tests
 			Assert.Null(result.Data);
 			Assert.True(result.StatusCode == HttpStatusCode.NotFound);
 		}
-
 
 
 		private static IReadOnlyList<Package> TwoTestPackageVersions => new List<Package>()
