@@ -28,6 +28,8 @@ namespace LocalNugetFeed.Controllers
 		/// <param name="package">nuget package file</param>
 		/// <returns>Status of push request</returns>
 		[HttpPut]
+		[ProducesResponseType(404, Type = typeof(NotFoundObjectResult))]
+		[ProducesResponseType(409, Type = typeof(ConflictObjectResult))]
 		[ProducesResponseType(400, Type = typeof(BadRequestObjectResult))]
 		public async Task<ActionResult<ResponseModel>> Push([FromForm] IFormFile package)
 		{
