@@ -41,14 +41,6 @@ namespace LocalNugetFeed.Core.Services
 				await packageFileStream.CopyToAsync(destinationFileStream);
 			}
 
-			using (var nuspec = packageReader.GetNuspec())
-			{
-				using (var fileStream = File.Open($"{fullPackagePath}.nuspec", FileMode.CreateNew))
-				{
-					await nuspec.CopyToAsync(fileStream);
-				}
-			}
-
 			var package = MapNuspecDataToPackage(packageReader.NuspecReader);
 
 			return new ResponseModel<Package>(HttpStatusCode.OK, package);
