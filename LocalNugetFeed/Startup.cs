@@ -1,10 +1,10 @@
 ﻿using System;
-using System.IO;
 using LocalNugetFeed.Controllers;
 using LocalNugetFeed.Core.Common;
 using LocalNugetFeed.Core.ConfigurationOptions;
 using LocalNugetFeed.Core.Interfaces;
 using LocalNugetFeed.Core.Services;
+using LocalNugetFeed.Web.Helpers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -35,7 +35,7 @@ namespace LocalNugetFeed
 				options.IdleTimeout = TimeSpan.FromMinutes(5);
 				options.Cookie.HttpOnly = true;
 			});
-			
+			services.AddLogging();
 			services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
 			
 			services.AddSpaStaticFiles(c =>
@@ -63,14 +63,7 @@ namespace LocalNugetFeed
 					.GetService<IOptionsSnapshot<PackagesFileStorageOptions>>()
 					.Value;
 
-				try
-				{
-					options.Path = PackagesFileHelper.GetPackagesFolderPath(options.Path);
-				}
-				catch (Exception)
-				{
-					options.Path = PackagesFileHelper.GetDefaultPackagesFolderFullPath();
-				}
+				options.Path = PackagesFileHelper.GetPackagesFolderPath(options.Path);
 
 				return options;
 			});
@@ -85,7 +78,7 @@ namespace LocalNugetFeed
 			}
 			else
 			{
-				// can be used when host will be secured and approved by certificate i.e. in production, not for local usage
+				#warning: we can use the hsts and https middleware, if host is secured and approved by certificate 
 				//app.UseHsts();
 				//app.UseHttpsRedirection();
 			}
@@ -97,9 +90,10 @@ namespace LocalNugetFeed
 			app.UseStaticFiles();
 			app.UseSpaStaticFiles();
 			app.UseStatusCodePages();
+			app.UseMiddleware<AppExceptionHandler>();
+			
 			app.UseMvc(routes =>
 			{
-				
 				// Service index
 				routes.MapRoute("index", "v3/index.json", defaults: new { controller = "Index", action = nameof(IndexController.Get)});
 

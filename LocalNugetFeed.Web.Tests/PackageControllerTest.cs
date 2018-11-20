@@ -25,16 +25,18 @@ namespace LocalNugetFeed.Web.Tests
 	public class PackageControllerTest
 	{
 		private readonly Mock<IPackageService> _mockPackageService;
+		private readonly Mock<IPackageFileStorageService> _mockPackageFileStorageService;
 
 		public PackageControllerTest()
 		{
 			_mockPackageService = new Mock<IPackageService>();
+			_mockPackageFileStorageService = new Mock<IPackageFileStorageService>();
 		}
 
 		[Fact]
 		public async Task Push_ReturnsSuccessfulResponse()
 		{
-			var _mockFile = GetMockFile();
+			var _mockFile = GetMockFile("MyTestPackage.nupkg", "Some content");
 			// setup
 			_mockPackageService.Setup(s => s.Push(_mockFile))
 				.ReturnsAsync(new ResponseModel(HttpStatusCode.OK));
@@ -71,7 +73,7 @@ namespace LocalNugetFeed.Web.Tests
 			// setup
 			var lastVersionPackage = TwoTestPackageVersions.OrderByDescending(x => new NuGetVersion(x.Version)).Last();
 			_mockPackageService.Setup(s => s.Search(null))
-				.ReturnsAsync(new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, new[] {lastVersionPackage}));
+				.ReturnsAsync(new ResponseModel<IReadOnlyList<Package>>(new[] {lastVersionPackage}));
 
 			// Act
 			var controller = new PackageController(_mockPackageService.Object);
@@ -88,18 +90,22 @@ namespace LocalNugetFeed.Web.Tests
 		}
 
 		[Fact]
-		public async Task Search_ReturnsBadRequestResult()
+		public async Task Search_ReturnsEmptyList()
 		{
 			// setup
 			_mockPackageService.Setup(s => s.Search(null))
-				.ReturnsAsync(new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.BadRequest));
+				.ReturnsAsync(new ResponseModel<IReadOnlyList<Package>>(new Package[] { }));
 
 			// Act
 			var controller = new PackageController(_mockPackageService.Object);
 			var result = await controller.Search();
 
 			// Assert
-			Assert.IsType<BadRequestObjectResult>(result.Result);
+			var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+			var packages = Assert.IsAssignableFrom<IReadOnlyList<Package>>(
+				actionResult.Value);
+			Assert.NotNull(packages);
+			Assert.False(packages.Any());
 		}
 
 
@@ -110,8 +116,8 @@ namespace LocalNugetFeed.Web.Tests
 		public async Task Search_ReturnsResponseAccordingWithInlineData(string query, bool isExist)
 		{
 			// setup
-			var searchResult = new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK,
-				new[] {TwoTestPackageVersions.OrderByDescending(x => new NuGetVersion(x.Version)).Last()});
+			var searchResult =
+				new ResponseModel<IReadOnlyList<Package>>(new[] {TwoTestPackageVersions.OrderByDescending(x => new NuGetVersion(x.Version)).Last()});
 
 			_mockPackageService.Setup(s => s.Search(query))
 				.ReturnsAsync(() => isExist ? searchResult : new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NotFound));
@@ -159,12 +165,12 @@ namespace LocalNugetFeed.Web.Tests
 		{
 			// setup
 			_mockPackageService.Setup(s => s.GetPackages())
-				.ReturnsAsync(() => new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, TwoTestPackageVersions));
+				.ReturnsAsync(() => TwoTestPackageVersions);
 
 			_mockPackageService.Setup(s => s.PackageVersions(packageId))
 				.ReturnsAsync(() =>
 				{
-					var searchResult = new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, TwoTestPackageVersions);
+					var searchResult = new ResponseModel<IReadOnlyList<Package>>(TwoTestPackageVersions);
 					return packageExists ? searchResult : new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NotFound);
 				});
 
@@ -187,20 +193,6 @@ namespace LocalNugetFeed.Web.Tests
 			}
 		}
 
-		[Fact]
-		public async Task PackageVersions_ReturnsBadRequestResult_WhenPackageIdIsUndefined()
-		{
-			// setup
-			_mockPackageService.Setup(s => s.PackageVersions(null))
-				.ReturnsAsync(new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.BadRequest));
-
-			// Act
-			var controller = new PackageController(_mockPackageService.Object);
-			var result = await controller.PackageVersions(null);
-
-			// Assert
-			Assert.IsType<BadRequestObjectResult>(result.Result);
-		}
 
 		#region integration & unit tests using testserver host
 
@@ -216,7 +208,9 @@ namespace LocalNugetFeed.Web.Tests
 				.GroupBy(g => g.Id)
 				.Select(z => z.First()).ToList();
 			_mockPackageService.Setup(s => s.Search(query))
-				.ReturnsAsync(new ResponseModel<IReadOnlyList<Package>>(statusCode, searchResult));
+				.ReturnsAsync(searchResult.Any()
+					? new ResponseModel<IReadOnlyList<Package>>(searchResult)
+					: new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NotFound));
 			// Act
 			TestServer server = new TestServer(new WebHostBuilder()
 				.UseStartup<Startup>()
@@ -251,7 +245,7 @@ namespace LocalNugetFeed.Web.Tests
 		[Fact]
 		public async Task Push_PutByRouteTemplate_ReturnsSuccessfulResponse()
 		{
-			var _mockFile = GetMockFile();
+			var _mockFile = GetMockFile("MyTestPackage.nupkg", "Some content");
 			// setup
 			_mockPackageService.Setup(s => s.Push(It.IsAny<IFormFile>()))
 				.ReturnsAsync(new ResponseModel(HttpStatusCode.OK));
@@ -308,9 +302,11 @@ namespace LocalNugetFeed.Web.Tests
 		public async Task PackageVersions_GetByRouteTemplate_ReturnsResponseAccordingWithInlineData(string packageId, HttpStatusCode statusCode)
 		{
 			// setup
+			var packageVersions = TwoTestPackageVersions.Where(x => x.Id.Equals(packageId, StringComparison.OrdinalIgnoreCase)).ToList();
 			_mockPackageService.Setup(s => s.PackageVersions(packageId))
-				.ReturnsAsync(new ResponseModel<IReadOnlyList<Package>>(statusCode,
-					TwoTestPackageVersions.Where(x => x.Id.Contains(packageId)).ToList()));
+				.ReturnsAsync(packageVersions.Any()
+					? new ResponseModel<IReadOnlyList<Package>>(packageVersions)
+					: new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NotFound));
 
 			// Act
 			TestServer server = new TestServer(new WebHostBuilder()
@@ -336,7 +332,57 @@ namespace LocalNugetFeed.Web.Tests
 			}
 		}
 
-		#endregion
+		/// <summary>
+		/// Common test to check global exception handling in app. for example, when we search something
+		/// </summary>
+		/// <returns></returns>
+		[Fact]
+		public async Task Search_GlobalExceptionHandling_WhenReadFromFileThrowsException()
+		{
+			// setup
+			string packageFolderNotFoundExceptionMessage = "Packages folder not found";
+			_mockPackageFileStorageService.Setup(s => s.Read())
+				.Returns(() => throw new DirectoryNotFoundException(packageFolderNotFoundExceptionMessage));
+
+			TestServer server = new TestServer(new WebHostBuilder()
+				.UseStartup<Startup>()
+				.ConfigureTestServices(services => { services.AddSingleton(_mockPackageFileStorageService.Object); }));
+
+			var client = server.CreateClient();
+
+			var responseMessage = await client.GetAsync("api/packages");
+			var content = await responseMessage.Content.ReadAsStringAsync();
+			var response = JsonConvert.DeserializeObject<ResponseModel>(content);
+			
+			//Assert
+			Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+			Assert.Contains(packageFolderNotFoundExceptionMessage, response.Message);
+		}
+		
+
+		[Fact]
+		public async Task Push_GlobalExceptionHandling_WhenSaveToFileThrowsException()
+		{
+			// setup
+			string packageFileNotFoundExceptionMessage = "Package file not found";
+			_mockPackageService.Setup(s => s.Push(It.IsAny<IFormFile>()))
+				.Returns(() => throw new ArgumentNullException(packageFileNotFoundExceptionMessage));
+
+			TestServer server = new TestServer(new WebHostBuilder()
+				.UseStartup<Startup>()
+				.ConfigureTestServices(services => { services.AddSingleton(_mockPackageService.Object); }));
+
+			var client = server.CreateClient();
+
+			var responseMessage = await client.PutAsync(Core.Common.Constants.NuGetPushRelativeUrl, It.IsAny<HttpContent>());
+			
+			var content = await responseMessage.Content.ReadAsStringAsync();
+			var response = JsonConvert.DeserializeObject<ResponseModel>(content);
+			
+			//Assert
+			Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+			Assert.Contains(packageFileNotFoundExceptionMessage, response.Message);
+		}
 
 		/// <summary>
 		/// integration testing of <see cref="PackageSessionService"/>, but by mocking of <see cref="PackageFileStorageService"/>
@@ -351,7 +397,7 @@ namespace LocalNugetFeed.Web.Tests
 				.GroupBy(g => g.Id)
 				.Select(z => z.First()).ToList();
 			var mockPackageFileStorageService = new Mock<IPackageFileStorageService>();
-			mockPackageFileStorageService.Setup(s => s.Read()).Returns(() => new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, searchResult));
+			mockPackageFileStorageService.Setup(s => s.Read()).Returns(() => searchResult);
 
 			// Act
 			TestServer server = new TestServer(new WebHostBuilder()
@@ -374,16 +420,16 @@ namespace LocalNugetFeed.Web.Tests
 			Assert.NotNull(packages.Single());
 		}
 
+		#endregion
+
+
 		/// <summary>
 		/// Setup mock file using a memory stream
 		/// </summary>
 		/// <returns>Mock file</returns>
-		private IFormFile GetMockFile()
+		private IFormFile GetMockFile(string fileName, string content)
 		{
 			var fileMock = new Mock<IFormFile>();
-
-			var content = "Some content";
-			var fileName = "MyTestPackage.nupkg";
 
 			var ms = new MemoryStream();
 			var writer = new StreamWriter(ms);

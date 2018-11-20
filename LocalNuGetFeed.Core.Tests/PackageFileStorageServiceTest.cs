@@ -24,19 +24,16 @@ namespace LocalNuGetFeed.Core.Tests
 		}
 
 		[Fact]
-		public void Read_ReturnsNotFound_LocationPathIsNotSet()
+		public void Read_ThrowException_DirectoryIsNotSet()
 		{
 			//setup
 			TestPackageHelper.CleanPackagesDefaultDirectory(PackagesFileHelper.GetDefaultPackagesFolderFullPath());
-
-			// Act
 			var storageOptions = new PackagesFileStorageOptions();
 			var packageFileStorageService = new PackageFileStorageService(storageOptions);
-			var result = packageFileStorageService.Read();
-
-			// Assert 
-			Assert.False(result.Success);
-			Assert.True(result.StatusCode == HttpStatusCode.NotFound);
+			
+			// act + assert
+			Assert.Throws<DirectoryNotFoundException>(() =>
+				packageFileStorageService.Read());
 		}
 		
 		[Theory]
@@ -65,24 +62,23 @@ namespace LocalNuGetFeed.Core.Tests
 			TestPackageHelper.CleanPackagesDefaultDirectory(PackagesFileHelper.GetDefaultPackagesFolderFullPath());
 
 			// Act
-			var result = _packageFileStorageService.Read();
+			var packages = _packageFileStorageService.Read();
 
 			// Assert 1
-			Assert.True(result.Success);
-			Assert.False(result.Data.Any());
+			Assert.False(packages.Any());
 
 			// save package file 
-			var savePackageResult = await SaveTestPackageFile();
+			var newPackage = await SaveTestPackageFile();
 
 			// Assert 2
-			Assert.True(savePackageResult.Success);
+			Assert.NotNull(newPackage);
 
-			result = _packageFileStorageService.Read();
+			packages = _packageFileStorageService.Read();
 
-			Assert.True(result.Data.Any());
-			Assert.Equal(result.Data.Single().Id, TestPackageHelper.TestPackageId, StringComparer.OrdinalIgnoreCase);
-			Assert.NotNull(result.Data.Single().PackageDependencies);
-			Assert.True(result.Data.Single().PackageDependencies.Any());
+			Assert.True(packages.Any());
+			Assert.Equal(packages.Single().Id, TestPackageHelper.TestPackageId, StringComparer.OrdinalIgnoreCase);
+			Assert.NotNull(packages.Single().PackageDependencies);
+			Assert.True(packages.Single().PackageDependencies.Any());
 		}
 
 		[Fact]
@@ -92,21 +88,20 @@ namespace LocalNuGetFeed.Core.Tests
 			TestPackageHelper.CleanPackagesDefaultDirectory(PackagesFileHelper.GetDefaultPackagesFolderFullPath());
 
 			// Act
-			var result = await SaveTestPackageFile();
+			var newPackage = await SaveTestPackageFile();
 
 			// Assert 
-			Assert.True(result.Success);
-			Assert.NotNull(result.Data);
-			Assert.Equal(result.Data.Id, TestPackageHelper.TestPackageId, StringComparer.OrdinalIgnoreCase);
+			Assert.NotNull(newPackage);
+			Assert.Equal(newPackage.Id, TestPackageHelper.TestPackageId, StringComparer.OrdinalIgnoreCase);
 		}
 
-		private async Task<ResponseModel<Package>> SaveTestPackageFile()
+		private async Task<Package> SaveTestPackageFile()
 		{
 			using (var stream = new MemoryStream(File.ReadAllBytes(TestPackageHelper.GetOSVersionPackageFilePath())))
 			{
 				using (var reader = new PackageArchiveReader(stream))
 				{
-					var saveResult = await _packageFileStorageService.Save(reader, stream);
+					var saveResult = await _packageFileStorageService.Save(reader.NuspecReader, stream);
 
 					return saveResult;
 				}

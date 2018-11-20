@@ -44,8 +44,8 @@ namespace LocalNuGetFeed.Core.Tests
 				stream.Seek(0, SeekOrigin.Begin);
 
 				// setup
-				_mockPackageFileStorageService.Setup(s => s.Save(It.IsAny<PackageArchiveReader>(), It.IsAny<Stream>()))
-					.ReturnsAsync(new ResponseModel<Package>(HttpStatusCode.OK));
+				_mockPackageFileStorageService.Setup(s => s.Save(It.IsAny<NuspecReader>(), It.IsAny<Stream>()))
+					.ReturnsAsync(It.IsAny<Package>());
 				_mockPackageSessionService.Setup(s => s.Set(It.IsAny<Package>()));
 				_mockPackageSessionService.Setup(s => s.Get()).Returns(() => new[] {TestPackageHelper.GetMockPackage()});
 
@@ -67,8 +67,8 @@ namespace LocalNuGetFeed.Core.Tests
 				stream.Seek(0, SeekOrigin.Begin);
 
 				// setup
-				_mockPackageFileStorageService.Setup(s => s.Save(It.IsAny<PackageArchiveReader>(), It.IsAny<Stream>()))
-					.ReturnsAsync(new ResponseModel<Package>(HttpStatusCode.OK));
+				_mockPackageFileStorageService.Setup(s => s.Save(It.IsAny<NuspecReader>(), It.IsAny<Stream>()))
+					.ReturnsAsync(It.IsAny<Package>());
 				_mockPackageSessionService.Setup(s => s.Set(It.IsAny<Package>()));
 				_mockPackageSessionService.Setup(s => s.Get()).Returns(() => new[] {TestPackageHelper.GetOSVersionPackage()});
 
@@ -83,24 +83,24 @@ namespace LocalNuGetFeed.Core.Tests
 		}
 
 		[Fact]
-		public async Task Push_ReturnsFailedResponse_PackageFileIsNull()
+		public async Task Push_ThrowsException_PackageFileIsNull()
 		{
+			// setup
 			var packageService = new PackageService(_mockPackageFileStorageService.Object, _mockPackageSessionService.Object);
-			var result = await packageService.Push(null);
 
-			// Assert
-			Assert.False(result.Success);
-			Assert.True(result.StatusCode == HttpStatusCode.BadRequest);
+			// Act + Assert
+			await Assert.ThrowsAsync<ArgumentNullException>(() => packageService.Push(null));
 		}
 
 		[Fact]
-		public async Task Push_ReturnsFailedResponse_PackageFileIsIncorrect()
+		public async Task Push_ThrowsException_PackageFileIsIncorrect()
 		{
-			var result = await _packageService.Push(TestPackageHelper.GetMockFile("some content", "wrongPackageFileExtension.txt"));
-			// Assert
-			Assert.False(result.Success);
-			Assert.True(result.StatusCode == HttpStatusCode.UnsupportedMediaType);
-			Assert.IsType<InvalidDataException>(result.ExceptionDetails);
+			// setup
+			var mockFile = TestPackageHelper.GetMockFile("some content", "wrongPackageFileExtension.txt");
+
+			// act + assert
+			await Assert.ThrowsAsync<InvalidDataException>(() =>
+				_packageService.Push(mockFile));
 		}
 
 		[Fact]
@@ -156,18 +156,18 @@ namespace LocalNuGetFeed.Core.Tests
 		}
 
 		[Fact]
-		public async Task Search_ReturnsNotFoundResult()
+		public async Task Search_ReturnsEmptyList()
 		{
 			// setup
-			_mockPackageSessionService.Setup(s => s.Get()).Returns(() => new List<Package>());
-			_mockPackageFileStorageService.Setup(s => s.Read()).Returns(() => new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NotFound));
+			_mockPackageSessionService.Setup(s => s.Get()).Returns(() => new Package[] { });
+			_mockPackageFileStorageService.Setup(s => s.Read()).Returns(() => new Package[] { });
 
 			// Act
 			var result = await _packageService.Search();
 
 			// Assert
-			Assert.False(result.Success);
-			Assert.True(result.StatusCode == HttpStatusCode.NotFound);
+			Assert.True(result.Success);
+			Assert.False(result.Data.Any());
 		}
 
 		[Theory]
@@ -200,7 +200,7 @@ namespace LocalNuGetFeed.Core.Tests
 		{
 			// setup
 			_mockPackageSessionService.Setup(s => s.Get()).Returns(() => new List<Package>());
-			_mockPackageFileStorageService.Setup(s => s.Read()).Returns(() => new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NotFound));
+			_mockPackageFileStorageService.Setup(s => s.Read()).Returns(() => new Package[] { });
 
 			// Act
 			var result = await _packageService.PackageVersions(MyTestPackageId);
@@ -247,7 +247,7 @@ namespace LocalNuGetFeed.Core.Tests
 		{
 			// setup
 			_mockPackageSessionService.Setup(s => s.Get()).Returns(() => new List<Package>());
-			_mockPackageFileStorageService.Setup(s => s.Read()).Returns(() => new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NotFound));
+			_mockPackageFileStorageService.Setup(s => s.Read()).Returns(() => new Package[] { });
 
 			// Act
 			var result = await _packageService.GetPackage(MyTestPackageId, "1.0.0");
@@ -267,9 +267,9 @@ namespace LocalNuGetFeed.Core.Tests
 			var result = await _packageService.GetPackages();
 
 			// Assert
-			Assert.True(result.Success);
-			Assert.True(result.Data.Any());
-			Assert.True(result.Data.Count == 2);
+			Assert.NotNull(result);
+			Assert.True(result.Any());
+			Assert.True(result.Count == 2);
 		}
 
 		[Fact]
@@ -278,31 +278,30 @@ namespace LocalNuGetFeed.Core.Tests
 			// setup
 			_mockPackageSessionService.Setup(s => s.Get()).Returns(() => null);
 			_mockPackageFileStorageService.Setup(s => s.Read())
-				.Returns(() => new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, TwoTestPackageVersions));
+				.Returns(() => TwoTestPackageVersions);
 
 			// Act
 			var result = await _packageService.GetPackages();
 
 			// Assert
-			Assert.True(result.Success);
-			Assert.True(result.Data.Any());
-			Assert.True(result.Data.Count == 2);
+			Assert.NotNull(result);
+			Assert.True(result.Any());
+			Assert.True(result.Count == 2);
 		}
 
 		[Fact]
-		public async Task GetPackages_ReturnsBadRequestWhenNoAnyPackages()
+		public async Task GetPackages_ReturnsEmptyList()
 		{
 			// setup
 			_mockPackageSessionService.Setup(s => s.Get()).Returns(() => null);
-			_mockPackageFileStorageService.Setup(s => s.Read()).Returns(() => new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NotFound));
+			_mockPackageFileStorageService.Setup(s => s.Read()).Returns(() => new Package[] { });
 
 			// Act
 			var result = await _packageService.GetPackages();
 
 			// Assert
-			Assert.False(result.Success);
-			Assert.Null(result.Data);
-			Assert.True(result.StatusCode == HttpStatusCode.NotFound);
+			Assert.NotNull(result);
+			Assert.False(result.Any());
 		}
 
 

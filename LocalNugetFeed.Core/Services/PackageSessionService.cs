@@ -43,6 +43,7 @@ namespace LocalNugetFeed.Core.Services
 		/// <param name="package">Package entity</param>
 		public void Set(Package package)
 		{
+			if (package == null) return;
 			var packages = new List<Package>(Get()) {package};
 			_session.Set(Constants.PackagesSessionCookieKey, packages);
 		}

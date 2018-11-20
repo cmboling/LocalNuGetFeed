@@ -4,40 +4,31 @@ using Newtonsoft.Json;
 
 namespace LocalNugetFeed.Core.Models
 {
-	public class ResponseModel<T>
+	public class ResponseModel<T> : ResponseModel
 	{
-		public string Message { get; }
-		public HttpStatusCode StatusCode { get; }
 		public T Data { get; }
-		public bool Success => StatusCode == HttpStatusCode.OK;
 
-		[JsonConstructor]
-		public ResponseModel(HttpStatusCode statusCode, T data, string message = null)
+		public ResponseModel(HttpStatusCode statusCode, string message = null) : base(statusCode, message)
+		{
+		}
+
+		public ResponseModel(T data) : base(HttpStatusCode.OK)
 		{
 			Data = data;
-			Message = message;
-			StatusCode = statusCode;
 		}
+	}
+
+	[Serializable]
+	public class ResponseModel
+	{
+		public string Message { get; protected set; }
+		public HttpStatusCode StatusCode { get; protected set; }
+		public bool Success => StatusCode == HttpStatusCode.OK;
 
 		public ResponseModel(HttpStatusCode statusCode, string message = null)
 		{
 			Message = message;
 			StatusCode = statusCode;
-		}
-	}
-
-	public class ResponseModel
-	{
-		public string Message { get; }
-		public HttpStatusCode StatusCode { get; }
-		public bool Success => StatusCode == HttpStatusCode.OK && ExceptionDetails == null;
-		public Exception ExceptionDetails{ get; }
-
-		public ResponseModel(HttpStatusCode statusCode, string message = null, Exception exceptionDetails = null)
-		{
-			Message = message;
-			StatusCode = statusCode;
-			ExceptionDetails = exceptionDetails;
 		}
 	}
 }

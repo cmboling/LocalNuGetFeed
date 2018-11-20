@@ -1,13 +1,13 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using LocalNugetFeed.Core.ConfigurationOptions;
 using LocalNugetFeed.Core.Entities;
 using LocalNugetFeed.Core.Extensions;
 using LocalNugetFeed.Core.Interfaces;
-using LocalNugetFeed.Core.Models;
 using NuGet.Packaging;
 
 namespace LocalNugetFeed.Core.Services
@@ -22,15 +22,15 @@ namespace LocalNugetFeed.Core.Services
 		}
 
 		/// <summary>
-		/// Save nuget package and nuspec metadata on local hard drive to an according folder
+		/// Save nuget package on local hard drive to predefined folder
 		/// </summary>
-		/// <param name="packageReader">package reader</param>
+		/// <param name="nuspecReader">nuspec reader</param>
 		/// <param name="packageFileStream">package file stream</param>
-		/// <returns>response status info</returns>
-		public async Task<ResponseModel<Package>> Save(PackageArchiveReader packageReader, Stream packageFileStream)
+		/// <returns>created package</returns>
+		public async Task<Package> Save(NuspecReader nuspecReader, Stream packageFileStream)
 		{
-			var packageFolderPath = Path.Combine(_storageOptions.Path, packageReader.NuspecReader.PackageId(), packageReader.NuspecReader.PackageVersion());
-			var fullPackagePath = Path.Combine(packageFolderPath, $"{packageReader.NuspecReader.PackageId()}.{packageReader.NuspecReader.PackageVersion()}");
+			var packageFolderPath = Path.Combine(_storageOptions.Path, nuspecReader.PackageId(), nuspecReader.PackageVersion());
+			var fullPackagePath = Path.Combine(packageFolderPath, $"{nuspecReader.PackageId()}.{nuspecReader.PackageVersion()}");
 
 			Directory.CreateDirectory(packageFolderPath);
 
@@ -41,20 +41,18 @@ namespace LocalNugetFeed.Core.Services
 				await packageFileStream.CopyToAsync(destinationFileStream);
 			}
 
-			var package = MapNuspecDataToPackage(packageReader.NuspecReader);
-
-			return new ResponseModel<Package>(HttpStatusCode.OK, package);
+			return MapNuspecDataToPackage(nuspecReader);
 		}
 
 		/// <summary>
 		/// Read all packages from file system
 		/// </summary>
 		/// <returns>packages collection</returns>
-		public ResponseModel<IReadOnlyList<Package>> Read()
+		public IReadOnlyList<Package> Read()
 		{
 			if (!Directory.Exists(_storageOptions.Path))
 			{
-				return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.NotFound, "Packages folder not found");
+				throw new DirectoryNotFoundException("Packages folder not found");
 			}
 
 			var result = new List<Package>();
@@ -80,7 +78,7 @@ namespace LocalNugetFeed.Core.Services
 				}
 			}
 
-			return new ResponseModel<IReadOnlyList<Package>>(HttpStatusCode.OK, result);
+			return result;
 		}
 
 		private static Package MapNuspecDataToPackage(NuspecReader packageNuspec)

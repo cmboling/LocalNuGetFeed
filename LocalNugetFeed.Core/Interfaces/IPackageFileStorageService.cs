@@ -12,13 +12,17 @@ namespace LocalNugetFeed.Core.Interfaces
 	public interface IPackageFileStorageService
 	{
 		/// <summary>
-		/// Save nuget package and nuspec metadata on local hard drive to an according folder
+		/// Save nuget package on local hard drive to predefined folder
 		/// </summary>
-		/// <param name="packageReader">package reader</param>
+		/// <param name="nuspecReader">nuspec reader</param>
 		/// <param name="packageFileStream">package file stream</param>
-		/// <returns>response status info</returns>
-		Task<ResponseModel<Package>> Save(PackageArchiveReader packageReader, Stream packageFileStream);
+		/// <returns>created package</returns>
+		Task<Package> Save(NuspecReader nuspecReader, Stream packageFileStream);
 
-		ResponseModel<IReadOnlyList<Package>> Read();
+		/// <summary>
+		/// Read all packages from file system
+		/// </summary>
+		/// <returns>packages collection</returns>
+		IReadOnlyList<Package> Read();
 	}
 }

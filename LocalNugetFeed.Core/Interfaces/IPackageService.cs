@@ -38,10 +38,10 @@ namespace LocalNugetFeed.Core.Interfaces
 		Task<ResponseModel<IReadOnlyList<Package>>> Search(string query = null);
 
 		/// <summary>
-		/// Get packages from session or file system
+		/// Get packages from session or file system (if session is empty)
 		/// </summary>
-		/// <returns>response with result</returns>
-		Task<ResponseModel<IReadOnlyList<Package>>> GetPackages();
+		/// <returns>packages</returns>
+		Task<IReadOnlyList<Package>> GetPackages();
 
 	}
 }
