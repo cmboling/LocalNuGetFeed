@@ -13,11 +13,7 @@ namespace LocalNugetFeed.Core.Extensions
 
 		public static T Get<T>(this ISession session, string key)
 		{
-			session.TryGetValue(key, out byte[] value);
-
-			string data = value != null ? Encoding.UTF8.GetString(value) : null;
-
-			return data == null ? default(T) : JsonConvert.DeserializeObject<T>(data);
+			return !session.TryGetValue(key, out byte[] value) ? default(T) : JsonConvert.DeserializeObject<T>(Encoding.UTF8.GetString(value));
 		}
 	}
 }
