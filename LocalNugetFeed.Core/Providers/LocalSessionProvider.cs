@@ -7,11 +7,7 @@ namespace LocalNugetFeed.Core.Providers
 	{
 		private LocalSession _session;
 
-		public LocalSession Session
-		{
-			get => _session;
-			set => _session = value;
-		}
+		public LocalSession Session => _session;
 
 		public LocalSessionProvider(IHttpContextAccessor accessor)
 		{

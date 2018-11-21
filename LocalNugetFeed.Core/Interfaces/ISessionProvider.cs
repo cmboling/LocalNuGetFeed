@@ -1,7 +1,7 @@
 namespace LocalNugetFeed.Core.Interfaces
 {
-	public interface ISessionProvider<T>
+	public interface ISessionProvider<out T>
 	{
-		T Session { get; set; }
+		T Session { get; }
 	}
 }
