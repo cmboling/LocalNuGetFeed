@@ -1,9 +1,13 @@
 ﻿using System;
-using LocalNugetFeed.Controllers;
+using AutoMapper;
+using LocalNugetFeed.Core.BLL;
+using LocalNugetFeed.Core.BLL.Interfaces;
 using LocalNugetFeed.Core.Common;
-using LocalNugetFeed.Core.ConfigurationOptions;
+using LocalNugetFeed.Core.Configuration;
 using LocalNugetFeed.Core.Interfaces;
+using LocalNugetFeed.Core.Providers;
 using LocalNugetFeed.Core.Services;
+using LocalNugetFeed.Web.Controllers;
 using LocalNugetFeed.Web.Helpers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -35,7 +39,15 @@ namespace LocalNugetFeed
 				options.IdleTimeout = TimeSpan.FromMinutes(5);
 				options.Cookie.HttpOnly = true;
 			});
+
+			var config = AutoMapperConfiguration.Configure();
+				
+			IMapper mapper = config.CreateMapper();
+			
+			services.AddSingleton(mapper);
+			
 			services.AddLogging();
+					
 			services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
 			
 			services.AddSpaStaticFiles(c =>
@@ -44,7 +56,9 @@ namespace LocalNugetFeed
 			});
 			services.AddTransient<IPackageFileStorageService, PackageFileStorageService>();
 			services.AddTransient<IPackageService, PackageService>();
+			services.AddTransient<IPackageManager, PackageManager>();
 			services.AddSingleton<IPackageSessionService, PackageSessionService>();
+			services.AddTransient<ISessionProvider<LocalSession>, LocalSessionProvider>();
 			
 			InitPackageFileStorage(services);
 		}

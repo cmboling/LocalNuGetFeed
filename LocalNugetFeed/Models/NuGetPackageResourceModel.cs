@@ -1,7 +1,7 @@
 ﻿using System;
 using Newtonsoft.Json;
 
-namespace LocalNugetFeed.Core.Models
+namespace LocalNugetFeed.Web.Models
 {
 	/// <summary>
 	/// Model of NuGet Package Resource
@@ -11,8 +11,8 @@ namespace LocalNugetFeed.Core.Models
 	{
 		public NuGetPackageResourceModel(string type, string id, string comment = null)
 		{
-			Id = id ?? throw new ArgumentNullException(nameof(id));
-			Type = type ?? throw new ArgumentNullException(nameof(type));
+			Id = id ?? throw new ArgumentNullException("Package Id is undefined");
+			Type = type ?? throw new ArgumentNullException("Package Type is undefined");
 			Comment = comment ?? string.Empty;
 		}
 

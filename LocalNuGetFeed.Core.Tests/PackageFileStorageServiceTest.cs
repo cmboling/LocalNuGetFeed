@@ -1,13 +1,13 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
+using AutoMapper;
 using LocalNugetFeed.Core.Common;
-using LocalNugetFeed.Core.ConfigurationOptions;
+using LocalNugetFeed.Core.Configuration;
 using LocalNugetFeed.Core.Entities;
-using LocalNugetFeed.Core.Models;
 using LocalNugetFeed.Core.Services;
+using Moq;
 using NuGet.Packaging;
 using Xunit;
 
@@ -16,11 +16,12 @@ namespace LocalNuGetFeed.Core.Tests
 	public class PackageFileStorageServiceTest
 	{
 		private readonly PackageFileStorageService _packageFileStorageService;
-
+		
 		public PackageFileStorageServiceTest()
 		{
+			IMapper mapper = AutoMapperConfiguration.Configure().CreateMapper();
 			var storageOptions = new PackagesFileStorageOptions() {Path = PackagesFileHelper.GetPackagesFolderPath(null)};
-			_packageFileStorageService = new PackageFileStorageService(storageOptions);
+			_packageFileStorageService = new PackageFileStorageService(storageOptions, mapper);
 		}
 
 		[Fact]
@@ -29,7 +30,7 @@ namespace LocalNuGetFeed.Core.Tests
 			//setup
 			TestPackageHelper.CleanPackagesDefaultDirectory(PackagesFileHelper.GetDefaultPackagesFolderFullPath());
 			var storageOptions = new PackagesFileStorageOptions();
-			var packageFileStorageService = new PackageFileStorageService(storageOptions);
+			var packageFileStorageService = new PackageFileStorageService(storageOptions, It.IsAny<IMapper>());
 			
 			// act + assert
 			Assert.Throws<DirectoryNotFoundException>(() =>
@@ -76,7 +77,7 @@ namespace LocalNuGetFeed.Core.Tests
 			packages = _packageFileStorageService.Read();
 
 			Assert.True(packages.Any());
-			Assert.Equal(packages.Single().Id, TestPackageHelper.TestPackageId, StringComparer.OrdinalIgnoreCase);
+			Assert.Equal(packages.Single().Id, TestPackageHelper.GetOSVersionPackageId, StringComparer.OrdinalIgnoreCase);
 			Assert.NotNull(packages.Single().PackageDependencies);
 			Assert.True(packages.Single().PackageDependencies.Any());
 		}
@@ -92,7 +93,24 @@ namespace LocalNuGetFeed.Core.Tests
 
 			// Assert 
 			Assert.NotNull(newPackage);
-			Assert.Equal(newPackage.Id, TestPackageHelper.TestPackageId, StringComparer.OrdinalIgnoreCase);
+			Assert.Equal(newPackage.Id, TestPackageHelper.GetOSVersionPackageId, StringComparer.OrdinalIgnoreCase);
+		}
+		
+		[Fact]
+		public async Task Save_ThrowsException_WhenStreamWasDisposedBefore()
+		{
+			//setup
+			TestPackageHelper.CleanPackagesDefaultDirectory(PackagesFileHelper.GetDefaultPackagesFolderFullPath());
+
+			// Act + assert
+			using (var stream = new MemoryStream(File.ReadAllBytes(TestPackageHelper.GetOSVersionPackageFilePath())))
+			{
+				using (var reader = new PackageArchiveReader(stream))
+				{
+					stream.Dispose();
+					await Assert.ThrowsAsync<ObjectDisposedException>(() => _packageFileStorageService.Save(reader.NuspecReader, stream));
+				}
+			}
 		}
 
 		private async Task<Package> SaveTestPackageFile()

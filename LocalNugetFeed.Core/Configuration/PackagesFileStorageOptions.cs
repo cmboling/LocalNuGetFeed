@@ -1,4 +1,4 @@
-namespace LocalNugetFeed.Core.ConfigurationOptions
+namespace LocalNugetFeed.Core.Configuration
 {
 	public class PackagesFileStorageOptions
 	{

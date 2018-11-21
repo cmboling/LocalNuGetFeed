@@ -8,7 +8,7 @@ namespace LocalNugetFeed.Core.Interfaces
 		/// <summary>
 		/// Get packages from current session
 		/// </summary>
-		/// <returns></returns>
+		/// <returns>list of packages</returns>
 		IReadOnlyList<Package> Get();
 		
 		/// <summary>

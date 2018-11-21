@@ -17,6 +17,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\LocalNuGetFeed.Core.Tests\LocalNuGetFeed.Core.Tests.csproj" />
       <ProjectReference Include="..\LocalNugetFeed.Core\LocalNugetFeed.Core.csproj" />
       <ProjectReference Include="..\LocalNugetFeed\LocalNugetFeed.Web.csproj" />
     </ItemGroup>

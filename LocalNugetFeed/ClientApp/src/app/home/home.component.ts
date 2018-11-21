@@ -34,7 +34,7 @@ export class HomeComponent {
   ngAfterViewInit() {
     fromEvent((this.searchRef.nativeElement) as any, 'input').pipe(
       map((evt: any) => evt.target.value),
-      debounceTime(1100), distinctUntilChanged())
+      debounceTime(550), distinctUntilChanged())
       .subscribe((text: any) => {
         this.router.navigate(['/home'], text && text.length > 0 ? {queryParams: {q: text}} : {});
         this.search(text);

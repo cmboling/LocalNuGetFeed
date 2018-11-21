@@ -3,37 +3,38 @@ using LocalNugetFeed.Core.Common;
 using LocalNugetFeed.Core.Entities;
 using LocalNugetFeed.Core.Extensions;
 using LocalNugetFeed.Core.Interfaces;
-using Microsoft.AspNetCore.Http;
+using LocalNugetFeed.Core.Providers;
 
 namespace LocalNugetFeed.Core.Services
 {
 	public class PackageSessionService : IPackageSessionService
 	{
-		private readonly ISession _session;
+		private readonly LocalSession _session;
 
-		public PackageSessionService(IHttpContextAccessor accessor)
+		public PackageSessionService(ISessionProvider<LocalSession> sessionProvider)
 		{
-			_session = accessor.HttpContext.Session;
+			_session = sessionProvider.Session;
 		}
 		
 		/// <summary>
 		/// Get packages from current session
 		/// </summary>
-		/// <returns></returns>
+		/// <returns>list of packages</returns>
 		public IReadOnlyList<Package> Get()
 		{
-			return _session.Get<IReadOnlyList<Package>>(Constants.PackagesSessionCookieKey) ?? new List<Package>();
+			return _session.Current.Get<IReadOnlyList<Package>>(Constants.PackagesSessionCookieKey) ?? new List<Package>();
 		}
 
 		/// <summary>
 		/// Add multiple packages to session storage
 		/// </summary>
 		/// <param name="packages">packages</param>
+		/// <returns></returns>
 		public void Set(IEnumerable<Package> packages)
 		{
 			if (packages != null)
 			{
-				_session.Set(Constants.PackagesSessionCookieKey, packages);
+				_session.Current.Set(Constants.PackagesSessionCookieKey, packages);
 			}
 		}
 		
@@ -41,11 +42,12 @@ namespace LocalNugetFeed.Core.Services
 		/// Add single package to session storage
 		/// </summary>
 		/// <param name="package">Package entity</param>
+		/// <returns></returns>
 		public void Set(Package package)
 		{
 			if (package == null) return;
 			var packages = new List<Package>(Get()) {package};
-			_session.Set(Constants.PackagesSessionCookieKey, packages);
+			_session.Current.Set(Constants.PackagesSessionCookieKey, packages);
 		}
 	}
 }

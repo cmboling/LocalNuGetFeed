@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using LocalNugetFeed.Core.Common;
 using LocalNugetFeed.Core.Entities;
@@ -8,9 +9,11 @@ namespace LocalNuGetFeed.Core.Tests
 {
 	public static class TestPackageHelper
 	{
-		public const string TestPackageId = "GetOSVersion";
-		public const string TestPackageVersion = "1.0.0";
-		
+		public const string GetOSVersionPackageId = "GetOSVersion";
+		public const string GetOSVersionPackageVersion = "1.0.0";
+		public const string MyTestPackageId = "MyTestPackage";
+		public const string SomePackageDependencyId = "SomePackageDependency";
+
 		/// <summary>
 		/// Clean directory with test packages
 		/// </summary>
@@ -27,7 +30,7 @@ namespace LocalNuGetFeed.Core.Tests
 				}
 			}
 		}
-		
+
 		/// <summary>
 		/// Setup mock file using a memory stream
 		/// </summary>
@@ -38,7 +41,7 @@ namespace LocalNuGetFeed.Core.Tests
 
 			var ms = new MemoryStream();
 			var writer = new StreamWriter(ms);
-			writer.Write(content);
+			writer.Write(content ?? "some content");
 			writer.Flush();
 			ms.Position = 0;
 			fileMock.Setup(_ => _.OpenReadStream()).Returns(ms);
@@ -47,7 +50,7 @@ namespace LocalNuGetFeed.Core.Tests
 
 			return fileMock.Object;
 		}
-		
+
 		/// <summary>
 		/// Mock Package entity
 		/// </summary>
@@ -60,7 +63,7 @@ namespace LocalNuGetFeed.Core.Tests
 				Version = "1.0.0"
 			};
 		}
-		
+
 		/// <summary>
 		/// Get full path of getosversion nuget package which is included to the project
 		/// </summary>
@@ -70,15 +73,17 @@ namespace LocalNuGetFeed.Core.Tests
 			var directoryInfo = Directory.GetParent(Directory.GetCurrentDirectory()).Parent;
 			if (directoryInfo != null)
 			{
-				var physicalFile = new FileInfo($@"{directoryInfo.Parent}\{Constants.DefaultPackagesDirectory}\{TestPackageId}\{TestPackageVersion}\{TestPackageId}.{TestPackageVersion}.nupkg");
+				var physicalFile =
+					new FileInfo(
+						$@"{directoryInfo.Parent}\{Constants.DefaultPackagesDirectory}\{GetOSVersionPackageId}\{GetOSVersionPackageVersion}\{GetOSVersionPackageId}.{GetOSVersionPackageVersion}.nupkg");
 
 				return physicalFile.FullName;
 			}
 
 			return null;
 		}
-		
-		
+
+
 		/// <summary>
 		/// Get GetOSVersion Package entity
 		/// </summary>
@@ -87,10 +92,42 @@ namespace LocalNuGetFeed.Core.Tests
 		{
 			return new Package()
 			{
-				Id = TestPackageId,
-				Version = TestPackageVersion
+				Id = GetOSVersionPackageId,
+				Version = GetOSVersionPackageVersion
 			};
 		}
 
+		public static IReadOnlyList<Package> TestPackages => new List<Package>()
+		{
+			new Package()
+			{
+				Id = MyTestPackageId,
+				Description = "Package description",
+				Authors = "D.B.",
+				Version = "1.0.0"
+			},
+			new Package()
+			{
+				Id = MyTestPackageId,
+				Description = "Package description",
+				Authors = "D.B.",
+				Version = "1.0.1",
+				PackageDependencies = new List<PackageDependencies>()
+				{
+					new PackageDependencies()
+					{
+						TargetFramework = ".Net Core v.2.1",
+						Dependencies = new List<PackageDependency>()
+						{
+							new PackageDependency()
+							{
+								Id = "SomePackageDependency",
+								Version = "1.1.1"
+							}
+						}
+					}
+				}
+			}
+		};
 	}
 }

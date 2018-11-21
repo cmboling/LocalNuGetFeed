@@ -1,10 +1,7 @@
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using LocalNugetFeed.Core.Entities;
-using LocalNugetFeed.Core.Models;
-using Microsoft.AspNetCore.Http;
 using NuGet.Packaging;
 
 namespace LocalNugetFeed.Core.Interfaces

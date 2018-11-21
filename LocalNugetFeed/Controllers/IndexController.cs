@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
-using LocalNugetFeed.Core.Models;
 using LocalNugetFeed.Web.Helpers;
+using LocalNugetFeed.Web.Models;
 using Microsoft.AspNetCore.Mvc;
 
-namespace LocalNugetFeed.Controllers
+namespace LocalNugetFeed.Web.Controllers
 {
 	public class IndexController : Controller
 	{

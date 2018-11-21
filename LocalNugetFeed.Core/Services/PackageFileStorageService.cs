@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using LocalNugetFeed.Core.ConfigurationOptions;
+using AutoMapper;
+using LocalNugetFeed.Core.Configuration;
 using LocalNugetFeed.Core.Entities;
 using LocalNugetFeed.Core.Extensions;
 using LocalNugetFeed.Core.Interfaces;
@@ -15,10 +15,12 @@ namespace LocalNugetFeed.Core.Services
 	public class PackageFileStorageService : IPackageFileStorageService
 	{
 		private readonly PackagesFileStorageOptions _storageOptions;
+		private readonly IMapper _mapper;
 
-		public PackageFileStorageService(PackagesFileStorageOptions storageOptions)
+		public PackageFileStorageService(PackagesFileStorageOptions storageOptions, IMapper mapper)
 		{
 			_storageOptions = storageOptions;
+			_mapper = mapper;
 		}
 
 		/// <summary>
@@ -29,6 +31,16 @@ namespace LocalNugetFeed.Core.Services
 		/// <returns>created package</returns>
 		public async Task<Package> Save(NuspecReader nuspecReader, Stream packageFileStream)
 		{
+			if (packageFileStream == null)
+			{
+				throw new ArgumentNullException("Stream is undefined");
+			}
+			
+			if (!packageFileStream.CanSeek || !packageFileStream.CanRead)
+			{
+				throw new InvalidDataException("Unable to seek to stream");
+			}
+
 			var packageFolderPath = Path.Combine(_storageOptions.Path, nuspecReader.PackageId(), nuspecReader.PackageVersion());
 			var fullPackagePath = Path.Combine(packageFolderPath, $"{nuspecReader.PackageId()}.{nuspecReader.PackageVersion()}");
 
@@ -41,7 +53,7 @@ namespace LocalNugetFeed.Core.Services
 				await packageFileStream.CopyToAsync(destinationFileStream);
 			}
 
-			return MapNuspecDataToPackage(nuspecReader);
+			return _mapper.Map<Package>(nuspecReader);
 		}
 
 		/// <summary>
@@ -70,9 +82,9 @@ namespace LocalNugetFeed.Core.Services
 					{
 						using (var reader = new PackageArchiveReader(packageFileName))
 						{
-							var packageNuspec = reader.NuspecReader;
+							var nuspec = reader.NuspecReader;
 
-							result.Add(MapNuspecDataToPackage(packageNuspec));
+							result.Add(_mapper.Map<Package>(nuspec));
 						}
 					}
 				}
@@ -81,24 +93,5 @@ namespace LocalNugetFeed.Core.Services
 			return result;
 		}
 
-		private static Package MapNuspecDataToPackage(NuspecReader packageNuspec)
-		{
-			return new Package()
-			{
-				Id = packageNuspec.PackageId(),
-				Version = packageNuspec.PackageVersion(),
-				Description = packageNuspec.GetDescription(),
-				Authors = packageNuspec.GetAuthors(),
-				PackageDependencies = packageNuspec.GetDependencyGroups().Select(x => new PackageDependencies()
-				{
-					TargetFramework = x.TargetFramework?.DotNetFrameworkName,
-					Dependencies = x.Packages.Select(z => new PackageDependency()
-					{
-						Id = z.Id,
-						Version = z.VersionRange.ToNormalizedString()
-					}).ToList()
-				}).ToList()
-			};
-		}
 	}
 }

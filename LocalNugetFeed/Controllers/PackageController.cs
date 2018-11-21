@@ -2,22 +2,21 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
-using LocalNugetFeed.Core.Entities;
-using LocalNugetFeed.Core.Interfaces;
-using LocalNugetFeed.Core.Models;
+using LocalNugetFeed.Core.BLL.DTO;
+using LocalNugetFeed.Core.BLL.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
-namespace LocalNugetFeed.Controllers
+namespace LocalNugetFeed.Web.Controllers
 {
 	public class PackageController : Controller
 	{
-		private readonly IPackageService _packageService;
+		private readonly IPackageManager _packageManager;
 
-		public PackageController(IPackageService packageService)
+		public PackageController(IPackageManager packageManager)
 		{
-			_packageService = packageService;
+			_packageManager = packageManager;
 		}
 
 		/// <summary>
@@ -29,18 +28,26 @@ namespace LocalNugetFeed.Controllers
 		[HttpPut]
 		[ProducesResponseType(409, Type = typeof(ConflictObjectResult))]
 		[ProducesResponseType(400, Type = typeof(BadRequestObjectResult))]
-		public async Task<ActionResult<ResponseModel>> Push([FromForm] IFormFile package)
+		public async Task<ActionResult<ResponseDTO>> Push([FromForm] IFormFile package)
 		{
-			var result = await _packageService.Push(package);
-
-			switch (result.StatusCode)
+			if (package == null)
 			{
-				case HttpStatusCode.OK:
-					return Ok(result);
-				case HttpStatusCode.Conflict:
-					return Conflict(result.Message);
-				default:
-					return BadRequest(result.Message);
+				throw new ArgumentNullException("Package file not found");
+			}
+
+			using (var sourceFileStream = package.OpenReadStream())
+			{
+				var result = await _packageManager.Push(sourceFileStream);
+
+				switch (result.StatusCode)
+				{
+					case HttpStatusCode.OK:
+						return Ok(result);
+					case HttpStatusCode.Conflict:
+						return Conflict(result.Message);
+					default:
+						return BadRequest(result.Message);
+				}
 			}
 		}
 
@@ -53,9 +60,9 @@ namespace LocalNugetFeed.Controllers
 		[Route("api/packages/{q?}")]
 		[ProducesResponseType(404, Type = typeof(NotFoundObjectResult))]
 		[ProducesResponseType(400, Type = typeof(BadRequestObjectResult))]
-		public async Task<ActionResult<IReadOnlyList<Package>>> Search([FromQuery(Name = "q")] string query = null)
+		public async Task<ActionResult<IReadOnlyList<PackageDTO>>> Search([FromQuery(Name = "q")] string query = null)
 		{
-			var searchResult = await _packageService.Search(query);
+			var searchResult = await _packageManager.Search(query);
 			switch (searchResult.StatusCode)
 			{
 				case HttpStatusCode.OK:
@@ -76,9 +83,9 @@ namespace LocalNugetFeed.Controllers
 		[Route("api/package/{id}")]
 		[ProducesResponseType(404, Type = typeof(NotFoundObjectResult))]
 		[ProducesResponseType(400, Type = typeof(BadRequestObjectResult))]
-		public async Task<ActionResult<IReadOnlyList<Package>>> PackageVersions([BindRequired, FromRoute] string id)
+		public async Task<ActionResult<IReadOnlyList<PackageVersionsDTO>>> PackageVersions([BindRequired, FromRoute] string id)
 		{
-			var result = await _packageService.PackageVersions(id);
+			var result = await _packageManager.PackageVersions(id);
 
 			switch (result.StatusCode)
 			{

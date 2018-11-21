@@ -1,6 +1,6 @@
-using System.IO;
+using System.Linq;
+using LocalNugetFeed.Core.Entities;
 using NuGet.Packaging;
-using NuGet.Packaging.Core;
 
 namespace LocalNugetFeed.Core.Extensions
 {
