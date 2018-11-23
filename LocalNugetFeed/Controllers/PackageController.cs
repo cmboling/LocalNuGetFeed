@@ -85,7 +85,7 @@ namespace LocalNugetFeed.Web.Controllers
 		[ProducesResponseType(400, Type = typeof(BadRequestObjectResult))]
 		public async Task<ActionResult<IReadOnlyList<PackageVersionsDTO>>> PackageVersions([BindRequired, FromRoute] string id)
 		{
-			var result = await _packageManager.PackageVersions(id);
+			var result = await _packageManager.GetPackageVersions(id);
 
 			switch (result.StatusCode)
 			{

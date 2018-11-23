@@ -12,6 +12,7 @@ using LocalNugetFeed.Core.Entities;
 using LocalNugetFeed.Core.Interfaces;
 using Moq;
 using NuGet.Packaging;
+using NuGet.Versioning;
 using Xunit;
 
 namespace LocalNuGetFeed.Core.Tests
@@ -43,7 +44,7 @@ namespace LocalNuGetFeed.Core.Tests
 				// setup
 				_mockPackageService.Setup(s => s.Push(It.IsAny<NuspecReader>(), It.IsAny<Stream>()))
 					.ReturnsAsync(TestPackageHelper.GetOSVersionPackage);
-				_mockPackageService.Setup(s => s.GetPackages()).ReturnsAsync(() => new List<Package>());
+				_mockPackageService.Setup(s => s.GetPackages(false)).ReturnsAsync(() => new List<Package>());
 
 				// Act
 				var result = await _packageManager.Push(stream);
@@ -64,7 +65,7 @@ namespace LocalNuGetFeed.Core.Tests
 				stream.Seek(0, SeekOrigin.Begin);
 
 				// setup
-				_mockPackageService.Setup(s => s.GetPackages()).ReturnsAsync(() => new[] {TestPackageHelper.GetOSVersionPackage()});
+				_mockPackageService.Setup(s => s.PackageExists(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(() => true);
 
 				// Act
 				var result = await _packageManager.Push(stream);
@@ -91,7 +92,7 @@ namespace LocalNuGetFeed.Core.Tests
 		public async Task Search_ReturnsPackagesOrderedByVersionDesc_WhenQueryIsEmpty()
 		{
 			// setup
-			_mockPackageService.Setup(s => s.GetPackages()).ReturnsAsync(TestPackageHelper.TestPackages);
+			_mockPackageService.Setup(s => s.GetPackages(true)).ReturnsAsync(TestPackageHelper.TestPackages.GetDictinctPackages);
 
 			// Act
 			var result = await _packageManager.Search();
@@ -120,7 +121,12 @@ namespace LocalNuGetFeed.Core.Tests
 			};
 			var allPackages = new List<Package>(TestPackageHelper.TestPackages) {testPackageWithNameInLowerCase};
 
-			_mockPackageService.Setup(s => s.GetPackages()).ReturnsAsync(() => allPackages);
+			var distinctPackages = allPackages.GetDictinctPackages();
+			
+			_mockPackageService.Setup(s => s.GetPackages(true)).ReturnsAsync(() => distinctPackages);
+			
+			_mockPackageService.Setup(s => s.Search(query)).ReturnsAsync(() => distinctPackages.Where(x=>x.Id.Contains(query, StringComparison.OrdinalIgnoreCase) || 
+			                                                                                        x.Description.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList());
 
 			// Act
 			var result = await _packageManager.Search(query);
@@ -131,8 +137,8 @@ namespace LocalNuGetFeed.Core.Tests
 				Assert.True(result.Success);
 				Assert.NotNull(result.Data);
 				Assert.True(result.Data.Any());
-				Assert.True(result.Data.Count == 1); // we should get only the latest version of TestPackage package
-				Assert.True(result.Data.First().Version == testPackageWithNameInLowerCase.Version);
+				Assert.NotNull(result.Data.Single()); // we should get only the single TestPackage package with it's latest version 
+				Assert.True(result.Data.Single().Version == allPackages.OrderByDescending(x => new NuGetVersion(x.Version)).First().Version);
 			}
 			else
 			{
@@ -141,10 +147,10 @@ namespace LocalNuGetFeed.Core.Tests
 		}
 
 		[Fact]
-		public async Task Search_ReturnsEmptyList_WhenWeHaveNothing()
+		public async Task Search_ReturnsEmptyList_WhenWeHaveNothingInLocalFeed()
 		{
 			// setup
-			_mockPackageService.Setup(s => s.GetPackages()).ReturnsAsync(() => new Package[] { });
+			_mockPackageService.Setup(s => s.GetPackages(true)).ReturnsAsync(() => new Package[] { });
 
 			// Act
 			var result = await _packageManager.Search();
@@ -160,10 +166,11 @@ namespace LocalNuGetFeed.Core.Tests
 		public async Task PackageVersions_ReturnsPackageVersionsOrNotFound(string packageId, bool isExist)
 		{
 			// setup
-			_mockPackageService.Setup(s => s.GetPackages()).ReturnsAsync(() => TestPackageHelper.TestPackages);
-
+			_mockPackageService.Setup(s => s.GetPackageVersions(packageId)).ReturnsAsync(() =>
+				TestPackageHelper.TestPackages.Where(x => x.Id.Contains(packageId, StringComparison.OrdinalIgnoreCase)).ToList());
+			
 			// Act
-			var result = await _packageManager.PackageVersions(packageId);
+			var result = await _packageManager.GetPackageVersions(packageId);
 
 			// Assert
 			if (isExist)
@@ -171,10 +178,7 @@ namespace LocalNuGetFeed.Core.Tests
 				Assert.True(result.Success);
 				Assert.NotNull(result.Data);
 				Assert.True(result.Data.Any());
-				Assert.True(result.Data.Count == 2); // we should get only the latest version of TestPackage package
-				Assert.NotNull(result.Data.First(x => x.Id == packageId && x.PackageDependencies.Any()));
-				Assert.Equal(TestPackageHelper.SomePackageDependencyId,
-					result.Data.First(x => x.Id == packageId).PackageDependencies.First().Dependencies.First().Id);
+				Assert.True(result.Data.Count == TestPackageHelper.TestPackages.Count);
 			}
 			else
 			{
@@ -184,44 +188,24 @@ namespace LocalNuGetFeed.Core.Tests
 
 
 		[Fact]
-		public async Task PackageVersions_ReturnsNotFoundResult()
+		public async Task PackageVersions_ReturnsNotFoundResult_WhenWeHaveNothingInLocalFeed()
 		{
 			// setup
-			_mockPackageService.Setup(s => s.GetPackages()).ReturnsAsync(() => new List<Package>());
+			_mockPackageService.Setup(s => s.GetPackageVersions(It.IsAny<string>())).ReturnsAsync(() => new List<Package>());
 
 			// Act
-			var result = await _packageManager.PackageVersions(TestPackageHelper.MyTestPackageId);
+			var result = await _packageManager.GetPackageVersions(TestPackageHelper.MyTestPackageId);
 
 			// Assert
 			Assert.False(result.Success);
 			Assert.True(result.StatusCode == HttpStatusCode.NotFound);
 		}
 
-
-		[Theory]
-		[InlineData("mytestpackage", "1.0.0", true)]
-		[InlineData("mytest", "1.0.0", false)]
-		[InlineData(TestPackageHelper.MyTestPackageId, "1.0.1", true)]
-		[InlineData(TestPackageHelper.MyTestPackageId, "2.0.0", false)]
-		[InlineData("UnknownPackage", "1.0.0", false)]
-		public async Task PackageExists_ReturnsPackageOrNotFound(string packageId, string packageVersion, bool isExist)
-		{
-			// setup
-			_mockPackageService.Setup(s => s.GetPackages()).ReturnsAsync(() => TestPackageHelper.TestPackages);
-
-			// Act
-			var packageExists = await _packageManager.PackageExists(packageId, packageVersion);
-
-			// assert
-			Assert.Equal(isExist, packageExists);
-		}
-
-
 		[Fact]
-		public async Task PackageExists_ReturnsFalse_WhenWeHaveNothing()
+		public async Task PackageExists_ReturnsFalse_WhenWeGetFalseFromService()
 		{
 			// setup
-			_mockPackageService.Setup(s => s.GetPackages()).ReturnsAsync(new List<Package>());
+			_mockPackageService.Setup(s => s.PackageExists(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(false);
 
 			// Act
 			var packageExists = await _packageManager.PackageExists(TestPackageHelper.GetOSVersionPackageId, TestPackageHelper.GetOSVersionPackageVersion);
@@ -230,17 +214,15 @@ namespace LocalNuGetFeed.Core.Tests
 			Assert.False(packageExists);
 		}
 
-		[Fact]
-		public async Task PackageExists_ThrowsException_WhenIdOrVersionAreNull()
+		[Theory]
+		[InlineData("TestPackage", null)]
+		[InlineData(null, "1.0.0")]
+		public async Task PackageExists_ThrowsException_WhenIdOrVersionAreNull(string packageId, string version)
 		{
-			// setup
-			_mockPackageSessionService.Setup(s => s.Get()).Returns(() => new List<Package>());
-			_mockPackageFileStorageService.Setup(s => s.Read()).Returns(() => new Package[] { });
-
 			// Act + Assert
-			await Assert.ThrowsAsync<ArgumentNullException>(() => _packageManager.PackageExists(It.IsAny<string>(), It.IsAny<string>()));
+			await Assert.ThrowsAsync<ArgumentNullException>(() => _packageManager.PackageExists(packageId, version));
 		}
-		
+
 		[Fact]
 		public async Task Push_ThrowsException_WhenStreamIsUnavailableToRead()
 		{
@@ -248,5 +230,6 @@ namespace LocalNuGetFeed.Core.Tests
 			await Assert.ThrowsAsync<ArgumentNullException>(() =>
 				_packageManager.Push(It.IsAny<Stream>()));
 		}
+
 	}
 }

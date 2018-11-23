@@ -30,6 +30,7 @@ namespace LocalNugetFeed.Web.Tests
 	{
 		private readonly Mock<IPackageManager> _mockPackageManager;
 		private readonly Mock<IPackageFileStorageService> _mockPackageFileStorageService;
+		private readonly Mock<IPackageService> _mockPackageService;
 		private readonly PackageController _controller;
 		private readonly IMapper _mapper;
 		private IReadOnlyList<PackageDTO> TestPackageDTOs => _mapper.Map<IReadOnlyList<PackageDTO>>(TestPackageHelper.TestPackages);
@@ -40,6 +41,7 @@ namespace LocalNugetFeed.Web.Tests
 			_mapper = AutoMapperConfiguration.Configure().CreateMapper();
 			_mockPackageManager = new Mock<IPackageManager>();
 			_mockPackageFileStorageService = new Mock<IPackageFileStorageService>();
+			_mockPackageService = new Mock<IPackageService>();
 			_controller = new PackageController(_mockPackageManager.Object);
 		}
 
@@ -164,10 +166,10 @@ namespace LocalNugetFeed.Web.Tests
 		public async Task PackageVersions_ReturnsResponseAccordingWithInlineData(string packageId, bool packageExists)
 		{
 			// setup
-			_mockPackageManager.Setup(s => s.GetPackages())
+			_mockPackageManager.Setup(s => s.GetPackages(false))
 				.ReturnsAsync(() => TestPackageDTOs);
 
-			_mockPackageManager.Setup(s => s.PackageVersions(packageId))
+			_mockPackageManager.Setup(s => s.GetPackageVersions(packageId))
 				.ReturnsAsync(() =>
 				{
 					var searchResult = new ResponseDTO<IReadOnlyList<PackageVersionsDTO>>(TestPackageVersionsDTOs);
@@ -184,7 +186,7 @@ namespace LocalNugetFeed.Web.Tests
 				var packages = Assert.IsAssignableFrom<IReadOnlyList<PackageVersionsDTO>>(
 					actionResult.Value);
 				Assert.NotNull(packages);
-				Assert.True(packages.Count == 2); // we should get both versions of TestPackage package
+				Assert.True(packages.Count == TestPackageDTOs.Count); // we should get all versions of TestPackage package
 			}
 			else
 			{
@@ -282,7 +284,7 @@ namespace LocalNugetFeed.Web.Tests
 		{
 			// setup
 			var packageVersions = TestPackageVersionsDTOs.Where(x => x.Id.Equals(packageId, StringComparison.OrdinalIgnoreCase)).ToList();
-			_mockPackageManager.Setup(s => s.PackageVersions(packageId))
+			_mockPackageManager.Setup(s => s.GetPackageVersions(packageId))
 				.ReturnsAsync(packageVersions.Any()
 					? new ResponseDTO<IReadOnlyList<PackageVersionsDTO>>(packageVersions)
 					: new ResponseDTO<IReadOnlyList<PackageVersionsDTO>>(HttpStatusCode.NotFound));
@@ -303,7 +305,7 @@ namespace LocalNugetFeed.Web.Tests
 			if (statusCode == HttpStatusCode.OK)
 			{
 				Assert.True(packages.Any());
-				Assert.True(packages.Count == 2); //2 versions = 2 packages
+				Assert.True(packages.Count == TestPackageVersionsDTOs.Count);  // we should get all versions of TestPackage package
 			}
 			else
 			{

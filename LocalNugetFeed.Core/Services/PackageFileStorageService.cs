@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -35,7 +36,7 @@ namespace LocalNugetFeed.Core.Services
 			{
 				throw new ArgumentNullException("Stream is undefined");
 			}
-			
+
 			if (!packageFileStream.CanSeek || !packageFileStream.CanRead)
 			{
 				throw new InvalidDataException("Unable to seek to stream");
@@ -45,6 +46,11 @@ namespace LocalNugetFeed.Core.Services
 			var fullPackagePath = Path.Combine(packageFolderPath, $"{nuspecReader.PackageId()}.{nuspecReader.PackageVersion()}");
 
 			Directory.CreateDirectory(packageFolderPath);
+
+			if (File.Exists($"{fullPackagePath}.nupkg"))
+			{
+				throw new DuplicateNameException("NuGet package file with such name already exists in the feed");
+			}
 
 			using (var destinationFileStream = File.Open($"{fullPackagePath}.nupkg", FileMode.CreateNew))
 			{
@@ -67,31 +73,24 @@ namespace LocalNugetFeed.Core.Services
 				throw new DirectoryNotFoundException("Packages folder not found");
 			}
 
-			var result = new List<Package>();
-			var packagesPaths = Directory.GetDirectories(_storageOptions.Path);
+			var packagesPath = new DirectoryInfo(_storageOptions.Path);
 
-			// since all packages are storing according with 2-level hierarchy (packageRootDirectory -> packageVersionDirectory) we should lookup using nested loop by package version, and we will ignore other packages 
-			foreach (var packageRootPath in packagesPaths)
-			{
-				var packageVersionPaths = Directory.GetDirectories(packageRootPath);
-
-				foreach (var packageVersionPath in packageVersionPaths)
+			var packageFiles = packagesPath.EnumerateDirectories()
+				.AsParallel()
+				.SelectMany(di =>
 				{
-					var packageFileName = Directory.GetFiles(packageVersionPath, "*.nupkg").FirstOrDefault();
-					if (!string.IsNullOrWhiteSpace(packageFileName))
+					var nupkgFiles = di.EnumerateFiles("*.nupkg", SearchOption.AllDirectories).Select(package =>
 					{
-						using (var reader = new PackageArchiveReader(packageFileName))
+						using (var reader = new PackageArchiveReader(package.FullName))
 						{
-							var nuspec = reader.NuspecReader;
-
-							result.Add(_mapper.Map<Package>(nuspec));
+							return reader.NuspecReader;
 						}
-					}
-				}
-			}
+					});
 
-			return result;
+					return nupkgFiles;
+				});
+
+			return _mapper.Map<IReadOnlyList<Package>>(packageFiles);
 		}
-
 	}
 }

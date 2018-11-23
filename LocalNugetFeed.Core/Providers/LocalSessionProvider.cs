@@ -3,6 +3,9 @@ using Microsoft.AspNetCore.Http;
 
 namespace LocalNugetFeed.Core.Providers
 {
+	/// <summary>
+	/// Local session provider which uses internal ISession by AspNetCore
+	/// </summary>
 	public class LocalSessionProvider : ISessionProvider<LocalSession>
 	{
 		private LocalSession _session;

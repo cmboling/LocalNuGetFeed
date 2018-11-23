@@ -1,9 +1,12 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using LocalNugetFeed.Core.Common;
 using LocalNugetFeed.Core.Entities;
 using Microsoft.AspNetCore.Http;
 using Moq;
+using NuGet.Versioning;
 
 namespace LocalNuGetFeed.Core.Tests
 {
@@ -111,6 +114,13 @@ namespace LocalNuGetFeed.Core.Tests
 				Id = MyTestPackageId,
 				Description = "Package description",
 				Authors = "D.B.",
+				Version = "1.0.5"
+			},
+			new Package()
+			{
+				Id = MyTestPackageId,
+				Description = "Package description",
+				Authors = "D.B.",
 				Version = "1.0.1",
 				PackageDependencies = new List<PackageDependencies>()
 				{
@@ -129,5 +139,12 @@ namespace LocalNuGetFeed.Core.Tests
 				}
 			}
 		};
+		
+		public static IReadOnlyList<Package> GetDictinctPackages(this IEnumerable<Package> packages)
+		{
+			return packages.OrderByDescending(s => new NuGetVersion(s.Version))
+				.GroupBy(g => g.Id, StringComparer.OrdinalIgnoreCase)
+				.Select(z => z.First()).ToList();
+		}
 	}
 }

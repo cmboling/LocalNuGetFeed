@@ -64,11 +64,11 @@ namespace LocalNugetFeed.Core.BLL
 		}
 
 		/// <summary>
-		/// Get package by id and version
+		/// Checks that package exists or not
 		/// </summary>
 		/// <param name="id">package id</param>
 		/// <param name="version">package version</param>
-		/// <returns>response with result</returns>		
+		/// <returns>true/false</returns>		
 		public async Task<bool> PackageExists(string id, string version)
 		{
 			if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(version))
@@ -76,13 +76,7 @@ namespace LocalNugetFeed.Core.BLL
 				throw new ArgumentNullException("Package Id and Version are required");
 			}
 
-			var packages = await GetPackages();
-
-			var package = packages.FirstOrDefault(x =>
-				x.Id.Equals(id, StringComparison.OrdinalIgnoreCase) &&
-				x.Version.Equals(version, StringComparison.OrdinalIgnoreCase));
-
-			return package != null;
+			return await _packageService.PackageExists(id, version);
 		}
 
 		/// <summary>
@@ -90,17 +84,21 @@ namespace LocalNugetFeed.Core.BLL
 		/// </summary>
 		/// <param name="id">package id</param>
 		/// <returns>response with result</returns>		
-		public async Task<ResponseDTO<IReadOnlyList<PackageVersionsDTO>>> PackageVersions(string id)
+		public async Task<ResponseDTO<IReadOnlyList<PackageVersionsDTO>>> GetPackageVersions(string id)
 		{
 			if (string.IsNullOrWhiteSpace(id))
 			{
 				throw new ArgumentNullException("Package Id is required");
 			}
 
-			var packages = await _packageService.GetPackages();
+			var packages = await _packageService.GetPackageVersions(id);
 
-			var packageVersions = packages.Where(x =>
-				x.Id.Equals(id, StringComparison.OrdinalIgnoreCase)).OrderByDescending(z => new NuGetVersion(z.Version)).ToList();
+			if (!packages.Any())
+			{
+				return new ResponseDTO<IReadOnlyList<PackageVersionsDTO>>(HttpStatusCode.NotFound, $"Package Id [{id}] not found");
+			}
+
+			var packageVersions = packages.OrderByDescending(z => new NuGetVersion(z.Version));
 
 			return packageVersions.Any()
 				? new ResponseDTO<IReadOnlyList<PackageVersionsDTO>>(_mapper.Map<IReadOnlyList<PackageVersionsDTO>>(packageVersions))
@@ -108,39 +106,35 @@ namespace LocalNugetFeed.Core.BLL
 		}
 
 		/// <summary>
-		/// Search packages by query in local feed (session/file system)
+		/// Search packages by query in local feed from session
 		/// </summary>
 		/// <param name="query">search query (optional)</param>
 		/// <returns>response with result</returns>		
 		public async Task<ResponseDTO<IReadOnlyList<PackageDTO>>> Search(string query = null)
 		{
-			var packages = await GetPackages();
-
-			if (!string.IsNullOrEmpty(query))
+			if (string.IsNullOrEmpty(query))
 			{
-				packages = packages.Where(x =>
-					x.Id.Contains(query, StringComparison.OrdinalIgnoreCase) || x.Description.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
-				if (!packages.Any())
-				{
-					return new ResponseDTO<IReadOnlyList<PackageDTO>>(HttpStatusCode.NotFound, "No any packages matching to your request");
-				}
+				return new ResponseDTO<IReadOnlyList<PackageDTO>>(await GetPackages(true));
 			}
 
-			var result = packages.OrderByDescending(s => new NuGetVersion(s.Version))
-				.GroupBy(g => g.Id, StringComparer.OrdinalIgnoreCase)
-				.Select(z => _mapper.Map<PackageDTO>(z.First()))
-				.ToList();
+			var packages = await _packageService.Search(query);
 
-			return new ResponseDTO<IReadOnlyList<PackageDTO>>(result);
+			if (!packages.Any())
+			{
+				return new ResponseDTO<IReadOnlyList<PackageDTO>>(HttpStatusCode.NotFound, "No any packages matching to your request");
+			}
+			
+			return new ResponseDTO<IReadOnlyList<PackageDTO>>(_mapper.Map<IReadOnlyList<PackageDTO>>(packages));
 		}
 
 		/// <summary>
-		/// Get packages from session or file system (if session is empty)
+		/// Get all packages from local feed
 		/// </summary>
+		/// <param name="onlyLastVersion">Boolean flag which is determines - return all versions of an each package or only last</param>
 		/// <returns>packages</returns>
-		public async Task<IReadOnlyList<PackageDTO>> GetPackages()
+		public async Task<IReadOnlyList<PackageDTO>> GetPackages(bool onlyLastVersion = false)
 		{
-			var packages = await _packageService.GetPackages();
+			var packages = await _packageService.GetPackages(onlyLastVersion);
 
 			return _mapper.Map<IReadOnlyList<PackageDTO>>(packages);
 		}

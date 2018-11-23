@@ -15,11 +15,11 @@ namespace LocalNugetFeed.Core.BLL.Interfaces
 		Task<ResponseDTO<PackageDTO>> Push(Stream sourceFileStream);
 
 		/// <summary>
-		/// Checks that package exists or not in local feed
+		/// Checks that package exists or not
 		/// </summary>
 		/// <param name="id">package id</param>
 		/// <param name="version">package version</param>
-		/// <returns>response with result</returns>	
+		/// <returns>true/false</returns>		
 		Task<bool> PackageExists(string id, string version);
 
 		/// <summary>
@@ -27,19 +27,20 @@ namespace LocalNugetFeed.Core.BLL.Interfaces
 		/// </summary>
 		/// <param name="id">package id</param>
 		/// <returns>response with result</returns>		
-		Task<ResponseDTO<IReadOnlyList<PackageVersionsDTO>>> PackageVersions(string id);
+		Task<ResponseDTO<IReadOnlyList<PackageVersionsDTO>>> GetPackageVersions(string id);
 
 		/// <summary>
-		/// Search packages by query in local feed (session/file system)
+		/// Search packages by query in local feed 
 		/// </summary>
 		/// <param name="query">search query (optional)</param>
 		/// <returns>response with result</returns>		
 		Task<ResponseDTO<IReadOnlyList<PackageDTO>>> Search(string query = null);
 
 		/// <summary>
-		/// Get packages from session or file system (if session is empty)
+		/// Get all packages from local feed
 		/// </summary>
+		/// <param name="onlyLastVersion">Boolean flag which is determines - return all versions of an each package or only last</param>
 		/// <returns>packages</returns>
-		Task<IReadOnlyList<PackageDTO>> GetPackages();
+		Task<IReadOnlyList<PackageDTO>> GetPackages(bool onlyLastVersion = false);
 	}
 }
