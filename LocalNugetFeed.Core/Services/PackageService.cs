@@ -71,7 +71,7 @@ namespace LocalNugetFeed.Core.Services
 		{
 			var packages = new HashSet<Package>(await GetPackages());
 			
-			packages.RemoveWhere(x => !x.Id.Contains(id, StringComparison.OrdinalIgnoreCase));
+			packages.RemoveWhere(x => !x.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
 
 			return packages;
 		}
