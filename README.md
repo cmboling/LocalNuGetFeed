@@ -15,8 +15,11 @@ Private NuGet feed to store your packages
 
 *NOTES:*
 
-* Check the version of npm which should be **5.5.1** or higher, also you can upgrade it using the following
-command: `npm install -g npm`
+* Check the version of **npm** which should be **5.5.1** or higher, also you can upgrade it using the following
+command: 
+
+`npm install -g npm`
+
 * If you're running a service on **macOS** and you don't have globally installed `angular/cli` package, then you should run the next command:
 
 `$ alias ng="./localnugetfeed/localnugetfeed/clientapp/node_modules/@angular/cli/bin/ng"`
