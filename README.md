@@ -3,7 +3,7 @@ Private NuGet feed to store your packages
 
 ## Getting Started
 
-0. Install **.NET Core v.2.1+, Node.js v.10+** (if you haven't it)
+0. Install **.NET Core v.2.1+, Node.js v.8.9+** (if you haven't it). *See notes below for more information*
 1. Clone a current repository `https://github.com/beylkhanovdamir/LocalNuGetFeed.git`
 2. Navigate to `.\LocalNuGetFeed\LocalNugetFeed\ClientApp`
 3. Run the `npm install` command
@@ -14,6 +14,11 @@ Private NuGet feed to store your packages
 8. Open the URL http://localhost:5000/ in your browser
 
 *NOTES:*
+
+* Check the version of **npm** which should be **5.5.1** or higher, also you can upgrade it using the following
+command: 
+
+`npm install -g npm`
 
 * If you're running a service on **macOS** and you don't have globally installed `angular/cli` package, then you should run the next command:
 
