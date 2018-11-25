@@ -166,8 +166,8 @@ namespace LocalNugetFeed.Web.Tests
 		public async Task PackageVersions_ReturnsResponseAccordingWithInlineData(string packageId, bool packageExists)
 		{
 			// setup
-			_mockPackageManager.Setup(s => s.GetPackages(false))
-				.ReturnsAsync(() => TestPackageDTOs);
+			_mockPackageService.Setup(s => s.GetPackages(true))
+				.ReturnsAsync(() => TestPackageHelper.TestPackages);
 
 			_mockPackageManager.Setup(s => s.GetPackageVersions(packageId))
 				.ReturnsAsync(() =>

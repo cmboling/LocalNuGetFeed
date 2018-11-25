@@ -35,12 +35,5 @@ namespace LocalNugetFeed.Core.BLL.Interfaces
 		/// <param name="query">search query (optional)</param>
 		/// <returns>response with result</returns>		
 		Task<ResponseDTO<IReadOnlyList<PackageDTO>>> Search(string query = null);
-
-		/// <summary>
-		/// Get all packages from local feed
-		/// </summary>
-		/// <param name="onlyLastVersion">Boolean flag which is determines - return all versions of an each package or only last</param>
-		/// <returns>packages</returns>
-		Task<IReadOnlyList<PackageDTO>> GetPackages(bool onlyLastVersion = false);
 	}
 }

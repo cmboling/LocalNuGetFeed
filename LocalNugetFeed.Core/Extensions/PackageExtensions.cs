@@ -1,5 +1,3 @@
-using System.Linq;
-using LocalNugetFeed.Core.Entities;
 using NuGet.Packaging;
 
 namespace LocalNugetFeed.Core.Extensions

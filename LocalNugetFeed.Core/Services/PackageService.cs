@@ -98,7 +98,7 @@ namespace LocalNugetFeed.Core.Services
 		/// <returns>true/false</returns>		
 		public async Task<bool> PackageExists(string id, string version)
 		{
-			var packages = new HashSet<Package>(await GetPackages(), new PackageComparer());
+			var packages = new HashSet<Package>(await GetPackages(), new PackageExistsComparer());
 
 			return packages.Count != 0 && packages.Contains(new Package() {Id = id, Version = version});
 		}

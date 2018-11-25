@@ -22,15 +22,11 @@ namespace LocalNuGetFeed.Core.Tests
 		private readonly Mock<IPackageService> _mockPackageService;
 		private readonly IPackageManager _packageManager;
 		private string _mockFilePath => TestPackageHelper.GetOSVersionPackageFilePath();
-		private readonly Mock<IPackageSessionService> _mockPackageSessionService;
-		private readonly Mock<IPackageFileStorageService> _mockPackageFileStorageService;
 
 		public PackageManagerTest()
 		{
 			IMapper mapper = AutoMapperConfiguration.Configure().CreateMapper();
 			_mockPackageService = new Mock<IPackageService>();
-			_mockPackageFileStorageService = new Mock<IPackageFileStorageService>();
-			_mockPackageSessionService = new Mock<IPackageSessionService>();
 			_packageManager = new PackageManager(_mockPackageService.Object, mapper);
 		}
 

@@ -114,7 +114,9 @@ namespace LocalNugetFeed.Core.BLL
 		{
 			if (string.IsNullOrEmpty(query))
 			{
-				return new ResponseDTO<IReadOnlyList<PackageDTO>>(await GetPackages(true));
+				var allPackages = await _packageService.GetPackages(true);
+				
+				return new ResponseDTO<IReadOnlyList<PackageDTO>>(_mapper.Map<IReadOnlyList<PackageDTO>>(allPackages));
 			}
 
 			var packages = await _packageService.Search(query);
@@ -125,18 +127,6 @@ namespace LocalNugetFeed.Core.BLL
 			}
 			
 			return new ResponseDTO<IReadOnlyList<PackageDTO>>(_mapper.Map<IReadOnlyList<PackageDTO>>(packages));
-		}
-
-		/// <summary>
-		/// Get all packages from local feed
-		/// </summary>
-		/// <param name="onlyLastVersion">Boolean flag which is determines - return all versions of an each package or only last</param>
-		/// <returns>packages</returns>
-		public async Task<IReadOnlyList<PackageDTO>> GetPackages(bool onlyLastVersion = false)
-		{
-			var packages = await _packageService.GetPackages(onlyLastVersion);
-
-			return _mapper.Map<IReadOnlyList<PackageDTO>>(packages);
 		}
 	}
 }

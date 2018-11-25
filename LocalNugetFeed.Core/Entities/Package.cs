@@ -18,8 +18,8 @@ namespace LocalNugetFeed.Core.Entities
 
 		public IReadOnlyList<PackageDependencies> PackageDependencies { get; set; }
 	}
-	
-	public class PackageComparer: IEqualityComparer<Package>
+
+	public class PackageExistsComparer : IEqualityComparer<Package>
 	{
 		public bool Equals(Package x, Package y)
 		{
@@ -34,4 +34,6 @@ namespace LocalNugetFeed.Core.Entities
 			}
 		}
 	}
+
+	
 }

@@ -181,11 +181,11 @@ namespace LocalNuGetFeed.Core.Tests
 		}
 
 		[Theory]
-		[InlineData("microsoft", "aspnetcore", "1.0.0", "this is microsoft.aspnetcore description", 1000, true)]
-		[InlineData("my test package", "microsoft.aspnetcore.authentication.oauth", "1.0.0", "this is microsoft.aspnetcore.authentication.oauth some description of my test package", 5000, true)]
-		[InlineData("test", "microsoft.aspnetcore.mvc.formatters.json","1.0.0",  "microsoft.aspnetcore.mvc.formatters.json description", 100000, false)] // this test case will crawl all 100k of records, because query does not match to any package id or description
-		[InlineData("identity", "microsoft.aspnetcore.identity","1.0.0",  "just microsoft.aspnetcore.ui description", 134500, true)] // 134k+ -> this is real approximate count of nuget packages in it's storage 
-		public async Task Search_BenchmarkTesting(string query, string packageId, string packageVersion, string description, int packagesCount, bool isExist)
+		[InlineData("microsoft", "aspnetcore", "1.0.0", "this is microsoft.aspnetcore description", 1000, true, 100)]
+		[InlineData("my test package", "microsoft.aspnetcore.authentication.oauth", "1.0.0", "this is microsoft.aspnetcore.authentication.oauth some description of my test package", 5000, true, 100)]
+		[InlineData("test", "microsoft.aspnetcore.mvc.formatters.json","1.0.0",  "microsoft.aspnetcore.mvc.formatters.json description", 100000, false, 500)] // this test case will crawl all 100k of records, because query does not match to any package id or description
+		[InlineData("identity", "microsoft.aspnetcore.identity","1.0.0",  "just microsoft.aspnetcore.ui description", 134500, true, 1000)] // 134k+ -> this is real approximate count of nuget packages in it's storage 
+		public async Task Search_BenchmarkTesting(string query, string packageId, string packageVersion, string description, int packagesCount, bool isExist, long expectedElapsedMsec)
 		{
 			var packages = new List<Package>();
 			for (int i = 0; i < packagesCount; i++)
@@ -204,9 +204,9 @@ namespace LocalNuGetFeed.Core.Tests
 
 			timer.Stop();
 
-			// Assert
-			Debug.WriteLine(timer.ElapsedMilliseconds);
-			Assert.True(timer.ElapsedMilliseconds < 500); // 0.5 sec
+			// Assert - avg time of crawling is 0.5 sec.
+			// it can be range from 0.1 up to 1 sec (in particular, when qty of packages > ~130k), but it depends on test runner by IDE and count of tests in it's queue
+			Assert.True(timer.ElapsedMilliseconds <= expectedElapsedMsec); 
 			Assert.Equal(result.Any(), isExist);
 		}
 	}
