@@ -27,8 +27,11 @@ export class HomeComponent {
 
     if (queryParams['q']) {
       this.query = queryParams['q'];
+      this.search(this.query);
     }
-    this.search(this.query);
+    else {
+      this.searchRef.nativeElement.focus();
+    }
   }
 
   ngAfterViewInit() {
