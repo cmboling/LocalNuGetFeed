@@ -71,7 +71,7 @@ namespace LocalNugetFeed.Core.Services
 		{
 			var packages = new HashSet<Package>(await GetPackages());
 			
-			packages.RemoveWhere(x => !x.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+			packages.RemoveWhere(x => !id.Equals(x.Id, StringComparison.OrdinalIgnoreCase));
 
 			return packages;
 		}
@@ -83,7 +83,7 @@ namespace LocalNugetFeed.Core.Services
 		/// <returns>packages</returns>		
 		public async Task<IReadOnlyCollection<Package>> Search(string query)
 		{
-			var packages = new HashSet<Package>(await GetPackages());
+			var packages = new HashSet<Package>(await GetPackages()); // we can pass here the true value for `onlyLastVersion` boolean flag, but it will decrease search performance in this case 
 			
 			packages.RemoveWhere(x => !x.Id.Contains(query, StringComparison.OrdinalIgnoreCase) && !x.Description.Contains(query, StringComparison.OrdinalIgnoreCase));
 			
@@ -104,7 +104,7 @@ namespace LocalNugetFeed.Core.Services
 		}
 		
 		/// <summary>
-		/// Removes package duplicates from list
+		/// Sorts packages by highest version and removes all other package versions which are precedes last version
 		/// </summary>
 		/// <param name="allPackages">packages</param>
 		/// <returns>distinct packages</returns>

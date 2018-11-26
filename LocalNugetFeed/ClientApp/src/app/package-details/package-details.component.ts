@@ -1,6 +1,6 @@
 import {filter} from 'rxjs/operators';
 import {Component} from '@angular/core';
-import {ActivatedRoute} from '@angular/router';
+import {ActivatedRoute, Router} from '@angular/router';
 import {Package} from "../shared/models/package.model";
 import {PackageService} from "../services/package.service";
 
@@ -12,7 +12,7 @@ export class PackageDetailsComponent {
   public packageVersions: Package[];
   public package: Package;
 
-  constructor(private _packageService: PackageService, private route: ActivatedRoute) {
+  constructor(private _packageService: PackageService, private route: ActivatedRoute, private router: Router) {
 
   }
 
@@ -41,7 +41,7 @@ export class PackageDetailsComponent {
         this.packageVersions = data;
         this.getPackageInfoByVersion(data[0]); // actual package with latest version
       }, error => {
-        console.error(error);
+        this.router.navigateByUrl('/').then(value => console.error(error));
       }
     );
   }

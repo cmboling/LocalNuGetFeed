@@ -186,7 +186,7 @@ namespace LocalNugetFeed.Web.Tests
 				var packages = Assert.IsAssignableFrom<IReadOnlyList<PackageVersionsDTO>>(
 					actionResult.Value);
 				Assert.NotNull(packages);
-				Assert.True(packages.Count == TestPackageDTOs.Count); // we should get all versions of TestPackage package
+				Assert.True(packages.Count == TestPackageHelper.TestPackages.Count); // we should get all versions of TestPackage package
 			}
 			else
 			{

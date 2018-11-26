@@ -107,12 +107,35 @@ namespace LocalNuGetFeed.Core.Tests
 			if (isExist)
 			{
 				Assert.True(result.Any());
-				Assert.True(result.Count == TestPackageHelper.TestPackages.Count);
+				Assert.True(result.Count == TestPackageHelper.TestPackages.Count);// we should get all versions of TestPackage package
 			}
 			else
 			{
 				Assert.False(result.Any());
 			}
+		}
+		
+		[Fact]
+		public async Task PackageVersions_ComparesTheExactPackageName_WhenWeHavePackagesIdsWithTheSameSubstring()
+		{
+			// setup
+			var anotherTestPackage = new Package()
+			{
+				Id = "TestPackage",
+				Description = "Package description",
+				Authors = "D.B.",
+				Version = "2.0.0"
+			};
+			var allPackages = new List<Package>(TestPackageHelper.TestPackages) {anotherTestPackage};
+			_mockPackageSessionService.Setup(s => s.Get()).Returns(() => allPackages);
+
+			// Act
+			var result = await _packageService.GetPackageVersions(TestPackageHelper.MyTestPackageId);
+
+			// Assert
+			Assert.NotNull(result);
+			Assert.True(result.Any());
+			Assert.True(result.Count == TestPackageHelper.TestPackages.Count);
 		}
 
 		[Theory]
