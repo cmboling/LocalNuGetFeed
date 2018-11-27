@@ -24,12 +24,7 @@ namespace LocalNugetFeed.Core.Services
 			_mapper = mapper;
 		}
 
-		/// <summary>
-		/// Save nuget package on local hard drive to predefined folder
-		/// </summary>
-		/// <param name="nuspecReader">nuspec reader</param>
-		/// <param name="packageFileStream">package file stream</param>
-		/// <returns>created package</returns>
+		///<inheritdoc cref="IPackageFileStorageService.Save"/>	
 		public async Task<Package> Save(NuspecReader nuspecReader, Stream packageFileStream)
 		{
 			if (packageFileStream == null)
@@ -62,10 +57,7 @@ namespace LocalNugetFeed.Core.Services
 			return _mapper.Map<Package>(nuspecReader);
 		}
 
-		/// <summary>
-		/// Read all packages from file system
-		/// </summary>
-		/// <returns>packages collection</returns>
+		///<inheritdoc cref="IPackageFileStorageService.Read"/>	
 		public IReadOnlyList<Package> Read()
 		{
 			if (!Directory.Exists(_storageOptions.Path))

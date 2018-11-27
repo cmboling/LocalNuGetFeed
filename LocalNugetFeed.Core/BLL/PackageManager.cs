@@ -25,11 +25,7 @@ namespace LocalNugetFeed.Core.BLL
 			_mapper = mapper;
 		}
 
-		/// <summary>
-		/// Push package to the local feed
-		/// </summary>
-		/// <param name="sourceFileStream">nuget package stream</param>
-		/// <returns>response with result</returns>
+		///<inheritdoc cref="IPackageManager.Push"/>	
 		public async Task<ResponseDTO<PackageDTO>> Push(Stream sourceFileStream)
 		{
 			if (sourceFileStream == null)
@@ -63,12 +59,7 @@ namespace LocalNugetFeed.Core.BLL
 			}
 		}
 
-		/// <summary>
-		/// Checks that package exists or not
-		/// </summary>
-		/// <param name="id">package id</param>
-		/// <param name="version">package version</param>
-		/// <returns>true/false</returns>		
+		///<inheritdoc cref="IPackageManager.PackageExists"/>	
 		public async Task<bool> PackageExists(string id, string version)
 		{
 			if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(version))
@@ -79,11 +70,7 @@ namespace LocalNugetFeed.Core.BLL
 			return await _packageService.PackageExists(id, version);
 		}
 
-		/// <summary>
-		/// Get package(s) by id
-		/// </summary>
-		/// <param name="id">package id</param>
-		/// <returns>response with result</returns>		
+		///<inheritdoc cref="IPackageManager.GetPackageVersions"/>	
 		public async Task<ResponseDTO<IReadOnlyList<PackageVersionsDTO>>> GetPackageVersions(string id)
 		{
 			if (string.IsNullOrWhiteSpace(id))
@@ -105,11 +92,7 @@ namespace LocalNugetFeed.Core.BLL
 				: new ResponseDTO<IReadOnlyList<PackageVersionsDTO>>(HttpStatusCode.NotFound, $"Package Id [{id}] not found");
 		}
 
-		/// <summary>
-		/// Search packages by query in local feed from session
-		/// </summary>
-		/// <param name="query">search query (optional)</param>
-		/// <returns>response with result</returns>		
+		///<inheritdoc cref="IPackageManager.Search"/>	
 		public async Task<ResponseDTO<IReadOnlyList<PackageDTO>>> Search(string query = null)
 		{
 			if (string.IsNullOrEmpty(query))

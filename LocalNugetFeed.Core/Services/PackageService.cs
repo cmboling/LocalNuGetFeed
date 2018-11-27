@@ -21,12 +21,7 @@ namespace LocalNugetFeed.Core.Services
 			_sessionService = sessionService;
 		}
 
-		/// <summary>
-		/// Pushes package to the local feed
-		/// </summary>
-		/// <param name="nuspecReader">nuspec reader</param>
-		/// <param name="packageFileStream">package file stream</param>
-		/// <returns>Package</returns>
+		///<inheritdoc cref="IPackageService.Push"/>
 		public async Task<Package> Push(NuspecReader nuspecReader, Stream packageFileStream)
 		{
 			// step 1. Save package physically on the drive	
@@ -38,11 +33,7 @@ namespace LocalNugetFeed.Core.Services
 			return savedPackage;
 		}
 
-		/// <summary>
-		/// Get packages from local feed
-		/// </summary>
-		/// <param name="onlyLastVersion">Boolean flag which is determines - return all versions of an each package or only last</param>
-		/// <returns>packages</returns>
+		///<inheritdoc cref="IPackageService.GetPackages"/>	
 		public async Task<IReadOnlyList<Package>> GetPackages(bool onlyLastVersion = false)
 		{
 			// step 1. try to get packages from session first
@@ -57,52 +48,42 @@ namespace LocalNugetFeed.Core.Services
 			if (packages.Any())
 			{
 				//update packages in session storage
-				_sessionService.Set(packages);
+				_sessionService.SetRange(packages);
 			}
 
 			return onlyLastVersion ? GetDistinctPackages(packages) : packages;
 		}
 
-		/// <summary>
-		/// Get package versions
-		/// </summary>
-		/// <returns>packages</returns>
+		///<inheritdoc cref="IPackageService.GetPackageVersions"/>	
 		public async Task<IReadOnlyCollection<Package>> GetPackageVersions(string id)
 		{
 			var packages = new HashSet<Package>(await GetPackages());
-			
+
 			packages.RemoveWhere(x => !id.Equals(x.Id, StringComparison.OrdinalIgnoreCase));
 
 			return packages;
 		}
 
-		/// <summary>
-		/// Search packages by query
-		/// </summary>
-		/// <param name="query">search query (required)</param>
-		/// <returns>packages</returns>		
+		///<inheritdoc cref="IPackageService.Search"/>	
 		public async Task<IReadOnlyCollection<Package>> Search(string query)
 		{
-			var packages = new HashSet<Package>(await GetPackages()); // we can pass here the true value for `onlyLastVersion` boolean flag, but it will decrease search performance in this case 
-			
-			packages.RemoveWhere(x => !x.Id.Contains(query, StringComparison.OrdinalIgnoreCase) && !x.Description.Contains(query, StringComparison.OrdinalIgnoreCase));
-			
+			var packages = new HashSet<Package>(
+				await GetPackages()); // we can pass here the true value for `onlyLastVersion` boolean flag, but it will decrease search performance in this case 
+
+			packages.RemoveWhere(x =>
+				!x.Id.Contains(query, StringComparison.OrdinalIgnoreCase) && !x.Description.Contains(query, StringComparison.OrdinalIgnoreCase));
+
 			return GetDistinctPackages(packages);
 		}
 
-		/// <summary>
-		/// Checks that package exists or not
-		/// </summary>
-		/// <param name="id">package id</param>
-		/// <param name="version">package version</param>
-		/// <returns>true/false</returns>		
+		///<inheritdoc cref="IPackageService.PackageExists"/>	
 		public async Task<bool> PackageExists(string id, string version)
 		{
 			var packages = new HashSet<Package>(await GetPackages(), new PackageExistsComparer());
 
 			return packages.Count != 0 && packages.Contains(new Package() {Id = id, Version = version});
 		}
-		
+
 		/// <summary>
 		/// Sorts packages by highest version and removes all other package versions which are precedes last version
 		/// </summary>

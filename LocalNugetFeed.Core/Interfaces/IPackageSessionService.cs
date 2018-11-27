@@ -21,6 +21,6 @@ namespace LocalNugetFeed.Core.Interfaces
 		/// Add multiple packages to session storage
 		/// </summary>
 		/// <param name="packages">packages</param>
-		void Set(IEnumerable<Package> packages);
+		void SetRange(IEnumerable<Package> packages);
 	}
 }

@@ -37,7 +37,7 @@ namespace LocalNugetFeed.Core.Interfaces
 		Task<IReadOnlyCollection<Package>> Search(string query);
 
 		/// <summary>
-		/// Checks that package exists or not
+		/// Checks that package exists or not in local feed
 		/// </summary>
 		/// <param name="id">package id</param>
 		/// <param name="version">package version</param>

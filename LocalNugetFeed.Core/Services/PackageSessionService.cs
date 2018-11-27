@@ -16,21 +16,14 @@ namespace LocalNugetFeed.Core.Services
 			_session = sessionProvider.Session;
 		}
 		
-		/// <summary>
-		/// Get packages from current session
-		/// </summary>
-		/// <returns>list of packages</returns>
+		///<inheritdoc cref="IPackageSessionService.Get"/>	
 		public IReadOnlyList<Package> Get()
 		{
 			return _session.Current.Get<IReadOnlyList<Package>>(Constants.PackagesSessionCookieKey) ?? new List<Package>();
 		}
 
-		/// <summary>
-		/// Add multiple packages to session storage
-		/// </summary>
-		/// <param name="packages">packages</param>
-		/// <returns></returns>
-		public void Set(IEnumerable<Package> packages)
+		///<inheritdoc cref="IPackageSessionService.SetRange"/>	
+		public void SetRange(IEnumerable<Package> packages)
 		{
 			if (packages != null)
 			{
@@ -38,11 +31,7 @@ namespace LocalNugetFeed.Core.Services
 			}
 		}
 		
-		/// <summary>
-		/// Add single package to session storage
-		/// </summary>
-		/// <param name="package">Package entity</param>
-		/// <returns></returns>
+		///<inheritdoc cref="IPackageSessionService.Set"/>	
 		public void Set(Package package)
 		{
 			if (package == null) return;
