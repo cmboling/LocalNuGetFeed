@@ -35,9 +35,7 @@ where *{PackageFilePath}* is the path to your NuGet package
 ## Running service on Docker
 You can run this service on Docker.
 
-0. Build the docker image by the following command:
-
-`docker build -t localnugetfeed .`
+0. Build the docker image by the following command: `docker build -t localnugetfeed .`
 
 Make sure that command was successfully completed to start use your tagged docker image *localnugetfeed:latest*
 
