@@ -31,3 +31,18 @@ Run the below command:
 `dotnet nuget push -s http://localhost:5000/v3/index.json {PackageFilePath}.nupkg` 
 
 where *{PackageFilePath}* is the path to your NuGet package
+
+## Running service on Docker
+You can run this service on Docker.
+
+0.Build the docker image by the following command:
+
+`docker build -t localnugetfeed .`
+
+Make sure that command was successfully completed to start use your tagged docker image *localnugetfeed:latest*
+
+1. Run the `docker run --rm -it --name localnugetfeed -p 5555:80 localnugetfeed:latest` command
+
+2. Push nuget package using the next command: `dotnet nuget push -s http://localhost:5555/v3/index.json {PackageFilePath}.nupkg`
+
+3. Open the URL http://localhost:5555/ in your browser and try to search for your packages
