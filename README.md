@@ -1,5 +1,5 @@
 # Private NuGet feed to store your packages
-![](https://cvws.icloud-content.com/B/AQh1cKB1cMvf_Yj96I7bTXXe2HUfAVc80rVdBRclEyXQM-cmVvXsDvok/localnugetfeed.JPG?o=Am8RfqyBWfYD48WlBy_NJo0pn_K2AhVPi7jRvV7dmIHI&v=1&x=3&a=B8RGBc6FKkDq6YPoIUQZ3Dqhr08hA7h8RwEAAAOpfEc&e=1543402981&k=G5Nypaz4dmO5y56eN9Tczw&fl=&r=f7d88a1a-3d7a-4eb4-bbb4-d6a5ffe01b66-1&ckc=com.apple.clouddocs&ckz=com.apple.CloudDocs&p=63&s=4s_kpJYY8_wSDhMyMIRAbVb8jmk&cd=i)
+![](https://cvws.icloud-content.com/B/AQh1cKB1cMvf_Yj96I7bTXXe2HUfAVc80rVdBRclEyXQM-cmVvXsDvok/localnugetfeed.JPG?o=AnDo8PxX2vS5ezlVlMU5Eh3-jOvdPfV1GXG8OdBAQIqK&v=1&x=3&a=B1SyFrxheWHoqAwE5_QJDvGZRl1sAxjMRwEAAAMJzEc&e=1544622192&k=G5Nypaz4dmO5y56eN9Tczw&fl=&r=213ecda2-8325-410d-8efb-d3a532269264-1&ckc=com.apple.clouddocs&ckz=com.apple.CloudDocs&p=63&s=QnWSSb7-z6IfOR0YHDD9gxL8J64&cd=i)
 
 ## Getting Started
 
